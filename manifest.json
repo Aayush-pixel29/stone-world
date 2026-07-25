@@ -1,0 +1,21 @@
+{
+  "name": "Stone World",
+  "short_name": "StoneWorld",
+  "description": "A brain-driven multiplayer survival game set in a petrified post-apocalyptic world.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0a0a0f",
+  "theme_color": "#f59e0b",
+  "icons": [
+    {
+      "src": "img/favicon.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "img/favicon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

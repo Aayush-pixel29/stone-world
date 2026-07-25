@@ -1,0 +1,157 @@
+export const BIOMES = {
+  river: {
+    name: 'River',
+    emoji: '🌊',
+    description: 'A rushing river cuts through the landscape...',
+    color: '#4a90d9',
+    resources: [
+      { id: 'clay', chance: 0.8, qty: [1, 3] },
+      { id: 'sand', chance: 0.7, qty: [1, 4] },
+      { id: 'water', chance: 1.0, qty: [1, 5] },
+      { id: 'reeds', chance: 0.6, qty: [1, 3] },
+      { id: 'river_stone', chance: 0.5, qty: [1, 2] },
+      { id: 'fish', chance: 0.4, qty: [1, 2] }
+    ]
+  },
+  forest: {
+    name: 'Forest',
+    emoji: '🌲',
+    description: 'A dense, ancient woodland teeming with life.',
+    color: '#2d7a3e',
+    resources: [
+      { id: 'wood', chance: 0.9, qty: [1, 3] },
+      { id: 'stick', chance: 1.0, qty: [2, 5] },
+      { id: 'plant_fiber', chance: 0.8, qty: [1, 4] },
+      { id: 'berries', chance: 0.6, qty: [1, 3] },
+      { id: 'bark', chance: 0.7, qty: [1, 2] },
+      { id: 'mushroom', chance: 0.4, qty: [1, 2] },
+      { id: 'animal_fat', chance: 0.3, qty: [1, 2] },
+      { id: 'hide', chance: 0.3, qty: [1, 1] }
+    ]
+  },
+  cave: {
+    name: 'Cave',
+    emoji: '🦇',
+    description: 'A dark, echoing cavern filled with minerals.',
+    color: '#5c5c5c',
+    resources: [
+      { id: 'iron_ore', chance: 0.4, qty: [1, 2] },
+      { id: 'malachite', chance: 0.5, qty: [1, 2] },
+      { id: 'limestone', chance: 0.6, qty: [1, 3] },
+      { id: 'saltpeter', chance: 0.4, qty: [1, 2] },
+      { id: 'sulfur', chance: 0.3, qty: [1, 2] },
+      { id: 'tin_ore', chance: 0.4, qty: [1, 2] },
+      { id: 'stone', chance: 1.0, qty: [2, 4] },
+      { id: 'coal', chance: 0.5, qty: [1, 3] }
+    ]
+  },
+  coast: {
+    name: 'Coast',
+    emoji: '🏖️',
+    description: 'Where the land meets the endless salty sea.',
+    color: '#f0e68c',
+    resources: [
+      { id: 'seashells', chance: 0.7, qty: [1, 4] },
+      { id: 'salt', chance: 0.6, qty: [1, 3] },
+      { id: 'seaweed', chance: 0.5, qty: [1, 3] },
+      { id: 'sand', chance: 0.9, qty: [2, 5] },
+      { id: 'driftwood', chance: 0.4, qty: [1, 2] },
+      { id: 'zinc_ore', chance: 0.3, qty: [1, 1] }
+    ]
+  }
+};
+
+export const ITEMS = {
+  // Raw Materials
+  stick: { name: 'Stick', emoji: '🪵', description: 'A dry wooden stick. The beginning of everything.', tier: 0, type: 'raw' },
+  stone: { name: 'Stone', emoji: '🪨', description: 'A hard piece of earth.', tier: 0, type: 'raw' },
+  wood: { name: 'Wood', emoji: '🪵', description: 'A solid log from a tree.', tier: 0, type: 'raw' },
+  plant_fiber: { name: 'Plant Fiber', emoji: '🌿', description: 'Tough, stringy plant material.', tier: 0, type: 'raw' },
+  clay: { name: 'Clay', emoji: '🟤', description: 'Moldable earth found near water.', tier: 0, type: 'raw' },
+  reeds: { name: 'Reeds', emoji: '🌾', description: 'Tall, flexible water plants.', tier: 0, type: 'raw' },
+  bark: { name: 'Bark', emoji: '📜', description: 'The rough outer skin of a tree.', tier: 0, type: 'raw' },
+  water: { name: 'Water', emoji: '💧', description: 'Clear, life-giving fluid.', tier: 0, type: 'raw' },
+  fish: { name: 'Fish', emoji: '🐟', description: 'A slippery swimmer.', tier: 0, type: 'raw' },
+  berries: { name: 'Berries', emoji: '🫐', description: 'Sweet, juicy wild fruit.', tier: 0, type: 'raw' },
+  river_stone: { name: 'River Stone', emoji: '🪨', description: 'Smooth, water-worn stone.', tier: 0, type: 'raw' },
+  mushroom: { name: 'Mushroom', emoji: '🍄', description: 'A fleshy fungus.', tier: 0, type: 'raw' },
+  animal_fat: { name: 'Animal Fat', emoji: '🥓', description: 'Greasy tissue from a hunted beast.', tier: 1, type: 'raw' },
+  hide: { name: 'Hide', emoji: '🐻', description: 'Raw animal skin.', tier: 1, type: 'raw' },
+  seashells: { name: 'Seashells', emoji: '🐚', description: 'Hard exoskeletons from the sea.', tier: 1, type: 'raw' },
+  sand: { name: 'Sand', emoji: '⏳', description: 'Fine grains of silica.', tier: 1, type: 'raw' },
+  ash: { name: 'Ash', emoji: '🌪️', description: 'Powdery remains of a fire.', tier: 1, type: 'raw' },
+  malachite: { name: 'Malachite', emoji: '🟩', description: 'A green copper carbonate mineral.', tier: 2, type: 'raw' },
+  tin_ore: { name: 'Tin Ore', emoji: '🪨', description: 'Cassiterite, a heavy, dark stone.', tier: 2, type: 'raw' },
+  iron_ore: { name: 'Iron Ore', emoji: '🩸', description: 'Reddish hematite rock.', tier: 3, type: 'raw' },
+  limestone: { name: 'Limestone', emoji: '🪨', description: 'A common sedimentary rock.', tier: 3, type: 'raw' },
+  saltpeter: { name: 'Saltpeter', emoji: '🧂', description: 'Potassium nitrate crystals.', tier: 2, type: 'raw' },
+  sulfur: { name: 'Sulfur', emoji: '🟨', description: 'Yellow, pungent brimstone.', tier: 2, type: 'raw' },
+  coal: { name: 'Coal', emoji: '🪨', description: 'Fossilized carbon fuel.', tier: 2, type: 'raw' },
+  salt: { name: 'Salt', emoji: '🧂', description: 'White crystalline sodium chloride.', tier: 1, type: 'raw' },
+  seaweed: { name: 'Seaweed', emoji: '🥬', description: 'Salty marine plants.', tier: 1, type: 'raw' },
+  driftwood: { name: 'Driftwood', emoji: '🪵', description: 'Sun-bleached wood washed ashore.', tier: 1, type: 'raw' },
+  zinc_ore: { name: 'Zinc Ore', emoji: '🪨', description: 'Sphalerite rock.', tier: 3, type: 'raw' },
+
+  // Crafted Items
+  fire: { name: 'Fire', emoji: '🔥', description: 'The first gift of civilization.', tier: 0, type: 'crafted' },
+  sharp_stone: { name: 'Sharp Stone', emoji: '🔪', description: 'A stone with a chipped, cutting edge.', tier: 0, type: 'crafted' },
+  crude_axe: { name: 'Crude Axe', emoji: '🪓', description: 'A basic chopping tool.', tier: 0, type: 'crafted' },
+  charcoal: { name: 'Charcoal', emoji: '🪨', description: 'Black, lightweight carbon fuel.', tier: 0, type: 'crafted' },
+  plank: { name: 'Plank', emoji: '🪵', description: 'A flat, worked piece of wood.', tier: 0, type: 'crafted' },
+  rope: { name: 'Rope', emoji: '🪢', description: 'Strong, twisted fibers.', tier: 0, type: 'crafted' },
+  spear: { name: 'Spear', emoji: '🔱', description: 'A pointed hunting weapon.', tier: 0, type: 'crafted' },
+  fired_clay: { name: 'Fired Clay', emoji: '🧱', description: 'Hardened, baked earth.', tier: 0, type: 'crafted' },
+  basket: { name: 'Basket', emoji: '🧺', description: 'A woven container for carrying goods.', tier: 0, type: 'crafted' },
+  tannin: { name: 'Tannin', emoji: '🟤', description: 'Bitter plant extract used for tanning.', tier: 0, type: 'crafted' },
+  cooked_fish: { name: 'Cooked Fish', emoji: '🍳', description: 'A hot, nourishing meal.', tier: 0, type: 'crafted' },
+  berry_juice: { name: 'Berry Juice', emoji: '🧃', description: 'Sweet and hydrating liquid.', tier: 0, type: 'crafted' },
+
+  kiln: { name: 'Kiln', emoji: '🏺', description: 'An oven capable of extreme heat.', tier: 1, type: 'crafted' },
+  calcium_carbonate_powder: { name: 'Calcium Carbonate Powder', emoji: '⚪', description: 'Crushed shells or limestone.', tier: 1, type: 'crafted' },
+  quicklime: { name: 'Quicklime', emoji: '💨', description: 'Caustic, burnt calcium oxide.', tier: 1, type: 'crafted' },
+  mortar: { name: 'Mortar', emoji: '🥣', description: 'A paste that hardens into stone.', tier: 1, type: 'crafted' },
+  slaked_lime: { name: 'Slaked Lime', emoji: '🥛', description: 'Alkaline calcium hydroxide paste.', tier: 1, type: 'crafted' },
+  rendered_fat: { name: 'Rendered Fat', emoji: '🧈', description: 'Purified animal grease.', tier: 1, type: 'crafted' },
+  lye: { name: 'Lye', emoji: '⚗️', description: 'A highly alkaline, caustic liquid.', tier: 1, type: 'crafted' },
+  soap: { name: 'Soap', emoji: '🧼', description: 'A cleansing bar.', tier: 1, type: 'crafted' },
+  crude_glass: { name: 'Crude Glass', emoji: '🪟', description: 'Opaque, unrefined glass.', tier: 1, type: 'crafted' },
+  charcoal_refined: { name: 'Refined Charcoal', emoji: '⬛', description: 'High-quality, hot-burning carbon.', tier: 1, type: 'crafted' },
+  leather: { name: 'Leather', emoji: '👞', description: 'Durable, tanned animal skin.', tier: 1, type: 'crafted' },
+  clay_slip: { name: 'Clay Slip', emoji: '🟤', description: 'A watery suspension of clay.', tier: 1, type: 'crafted' },
+
+  copper: { name: 'Copper', emoji: '🪙', description: 'A soft, conductive metal.', tier: 2, type: 'crafted' },
+  tin: { name: 'Tin', emoji: '🥈', description: 'A silvery, low-melting metal.', tier: 2, type: 'crafted' },
+  bronze: { name: 'Bronze', emoji: '🥉', description: 'A hard, durable alloy.', tier: 2, type: 'crafted' },
+  bronze_blade: { name: 'Bronze Blade', emoji: '🗡️', description: 'A sharp, enduring edge.', tier: 2, type: 'crafted' },
+  bronze_sword: { name: 'Bronze Sword', emoji: '⚔️', description: 'A deadly weapon of war.', tier: 2, type: 'crafted' },
+  copper_wire: { name: 'Copper Wire', emoji: '🪢', description: 'A thin, flexible conductive thread.', tier: 2, type: 'crafted' },
+  glass: { name: 'Glass', emoji: '🧊', description: 'Clear, brittle material.', tier: 2, type: 'crafted' },
+  glass_lens: { name: 'Glass Lens', emoji: '🔍', description: 'Curved glass that bends light.', tier: 2, type: 'crafted' },
+  pottery: { name: 'Pottery', emoji: '🏺', description: 'A durable ceramic container.', tier: 2, type: 'crafted' },
+  water_vessel: { name: 'Water Vessel', emoji: '🚰', description: 'A jar for carrying fluids.', tier: 2, type: 'crafted' },
+  copper_sheet: { name: 'Copper Sheet', emoji: '📜', description: 'Flattened copper.', tier: 2, type: 'crafted' },
+  gunpowder: { name: 'Gunpowder', emoji: '💣', description: 'An explosive black powder.', tier: 2, type: 'crafted' },
+
+  iron: { name: 'Iron', emoji: '🔩', description: 'A strong, heavy metal.', tier: 3, type: 'crafted' },
+  steel: { name: 'Steel', emoji: '🦾', description: 'An exceptionally hard alloy.', tier: 3, type: 'crafted' },
+  steel_blade: { name: 'Steel Blade', emoji: '🔪', description: 'A razor-sharp edge.', tier: 3, type: 'crafted' },
+  steel_sword: { name: 'Steel Sword', emoji: '🗡️', description: 'The pinnacle of melee weaponry.', tier: 3, type: 'crafted' },
+  iron_sheet: { name: 'Iron Sheet', emoji: '🛡️', description: 'Flat, durable iron.', tier: 3, type: 'crafted' },
+  anvil: { name: 'Anvil', emoji: '🗜️', description: 'A heavy block for shaping metal.', tier: 3, type: 'crafted' },
+  iron_sulfide: { name: 'Iron Sulfide', emoji: '🪨', description: 'A dark, foul-smelling compound.', tier: 3, type: 'crafted' },
+  sulfuric_acid_weak: { name: 'Weak Sulfuric Acid', emoji: '🧪', description: 'A corrosive liquid.', tier: 3, type: 'crafted' },
+  hydrochloric_acid: { name: 'Hydrochloric Acid', emoji: '🧪', description: 'A potent, fuming acid.', tier: 3, type: 'crafted' },
+  zinc: { name: 'Zinc', emoji: '🪙', description: 'A bluish-white metal.', tier: 3, type: 'crafted' },
+  voltaic_cell: { name: 'Voltaic Cell', emoji: '🔋', description: 'A primitive battery.', tier: 3, type: 'crafted' },
+
+  circuit: { name: 'Circuit', emoji: '🔌', description: 'A path for electric current.', tier: 4, type: 'crafted' },
+  electric_lamp: { name: 'Electric Lamp', emoji: '💡', description: 'A contained, glowing light.', tier: 4, type: 'crafted' },
+  ether: { name: 'Ether', emoji: '☁️', description: 'A volatile, sweet-smelling solvent.', tier: 4, type: 'crafted' },
+  alcohol: { name: 'Alcohol', emoji: '🍷', description: 'An intoxicating, flammable liquid.', tier: 4, type: 'crafted' },
+  distilled_alcohol: { name: 'Distilled Alcohol', emoji: '🍸', description: 'Highly concentrated spirits.', tier: 4, type: 'crafted' },
+  disinfectant: { name: 'Disinfectant', emoji: '🧴', description: 'A sterilizing solution.', tier: 4, type: 'crafted' },
+  ferric_chloride: { name: 'Ferric Chloride', emoji: '🧪', description: 'An etchant and coagulant.', tier: 4, type: 'crafted' },
+  calcium_carbide: { name: 'Calcium Carbide', emoji: '🪨', description: 'A dark, rocky chemical.', tier: 4, type: 'crafted' },
+  acetylene_gas: { name: 'Acetylene Gas', emoji: '💨', description: 'A highly flammable gas.', tier: 4, type: 'crafted' },
+  nital: { name: 'Nital', emoji: '🧪', description: 'The revival fluid.', tier: 4, type: 'crafted' }
+};

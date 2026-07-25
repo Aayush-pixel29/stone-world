@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Stone World — A brain-driven multiplayer survival game. Walk through a 3D jungle and rebuild civilization using real science.">
+  <meta name="theme-color" content="#f59e0b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Stone World — Rebuild Civilization</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="index.css">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="img/favicon.svg">
+
+  <!-- Three.js Import Map -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.164.1/build/three.module.js"
+    }
+  }
+  </script>
+</head>
+<body>
+  <!-- Anime Connection Screen -->
+  <div id="connection-screen">
+    <div class="anime-bg" style="background-image: url('img/anime_bg.png');"></div>
+    <div class="anime-overlay-gradient"></div>
+    
+    <div class="intro-content glass-panel-dark">
+      <div class="title-area">
+        <h1 class="anime-title">STONE WORLD</h1>
+        <p class="anime-subtitle">Two million years of human history... petrified.</p>
+      </div>
+
+      <div class="story-monologue">
+        <p id="monologue-text">Awaken. It is time to rebuild civilization from scratch. Ten billion percent pure logic.</p>
+      </div>
+
+      <div class="connection-buttons">
+        <button id="host-btn" class="conn-btn anime-btn">
+          <span class="btn-icon">📡</span> Host Game
+        </button>
+        <button id="join-btn" class="conn-btn anime-btn">
+          <span class="btn-icon">🔗</span> Join Game
+        </button>
+        <button id="solo-btn" class="conn-btn anime-btn solo">
+          <span class="btn-icon">🧑</span> Play Solo
+        </button>
+      </div>
+
+      <div id="room-code-display" class="hidden">
+        <p class="label">Your Room Code</p>
+        <div class="room-code-box">
+          <span id="room-code-value">------</span>
+          <button id="copy-code-btn" title="Copy code">📋</button>
+        </div>
+        <p class="waiting-text">Share this code with your partner...</p>
+      </div>
+
+      <div id="join-input-area" class="hidden">
+        <input type="text" id="join-code-input" placeholder="Enter Room Code" maxlength="6" autocomplete="off">
+        <button id="join-connect-btn" class="conn-btn anime-btn">Connect</button>
+      </div>
+
+      <p id="connection-status-text" class="status-text"></p>
+    </div>
+  </div>
+
+  <!-- 3D World Canvas Container -->
+  <div id="game-canvas"></div>
+
+  <!-- Controls Help (bottom left) -->
+  <div id="controls-help">
+    <span>WASD</span> Move &nbsp;|&nbsp; <span>C</span> Camera &nbsp;|&nbsp; <span>Shift</span> Run &nbsp;|&nbsp; <span>E</span> Explore &nbsp;|&nbsp; <span>Tab</span> Crafting
+  </div>
+
+  <!-- HUD Overlay -->
+  <header id="hud">
+    <div class="hud-left">
+      <span class="hud-title">STONE WORLD</span>
+      <span class="hud-divider">|</span>
+      <span class="hud-stat">Day <span id="day-counter">1</span></span>
+    </div>
+    <div class="hud-center">
+      <div class="biome-indicator" id="biome-indicator">
+        <span id="biome-emoji">🌲</span>
+        <span id="biome-name">Forest</span>
+      </div>
+      <div class="tier-display">
+        <span id="tier-label">Tier 0</span>
+        <div class="tier-bar">
+          <div id="tier-progress" class="tier-fill"></div>
+        </div>
+      </div>
+    </div>
+    <div class="hud-right">
+      <span id="connection-status" class="status-dot disconnected" title="Solo mode"></span>
+      <button id="journal-btn" class="hud-btn" title="Journal">📖</button>
+      <button id="audio-toggle" class="hud-btn" title="Toggle audio">🔊</button>
+      <button id="new-game-btn" class="hud-btn" title="New Game">🔄</button>
+    </div>
+  </header>
+
+  <!-- Objective Tracker (Top Left under HUD) -->
+  <div id="objective-tracker" class="glass-panel">
+    <div class="obj-title">Current Objective</div>
+    <div id="obj-main">The Spark of Civilization</div>
+    <div id="obj-sub">Gather sticks and create Fire.</div>
+  </div>
+
+  <!-- World Log (floating, bottom-left, compact) -->
+  <div id="world-log-float">
+    <div id="world-log"></div>
+  </div>
+
+  <!-- Quick Inventory Bar (bottom center) -->
+  <div id="quick-inventory">
+    <div id="inventory-bar"></div>
+    <button id="open-crafting-btn" class="action-btn">⚗️ Craft <span class="key-hint">Tab</span></button>
+    <button id="explore-btn" class="action-btn explore">🔍 Explore <span class="key-hint">E</span></button>
+  </div>
+
+  <!-- Full Crafting Overlay (toggled with Tab) -->
+  <div id="crafting-overlay" class="hidden">
+    <div class="overlay-backdrop"></div>
+    <div class="crafting-overlay-content">
+      <!-- Crafting Bench Panel -->
+      <section id="crafting-panel" class="glass-panel">
+        <div class="panel-header">
+          <h2>⚗️ Crafting Bench</h2>
+          <button id="close-crafting-btn" class="close-btn">✕</button>
+        </div>
+        <div id="crafting-bench">
+          <div class="craft-slots">
+            <div class="craft-slot" data-slot="0">
+              <span class="slot-placeholder">+</span>
+            </div>
+            <span class="craft-plus">+</span>
+            <div class="craft-slot" data-slot="1">
+              <span class="slot-placeholder">+</span>
+            </div>
+            <span class="craft-plus">+</span>
+            <div class="craft-slot" data-slot="2">
+              <span class="slot-placeholder">+</span>
+            </div>
+          </div>
+
+          <div id="process-selector"></div>
+
+          <button id="combine-btn">⚗️ COMBINE</button>
+          <div id="craft-result"></div>
+        </div>
+      </section>
+
+      <!-- Full Inventory Panel -->
+      <section id="inventory-panel" class="glass-panel">
+        <div class="panel-header">
+          <h2>🎒 Inventory <span id="inv-count"></span></h2>
+        </div>
+        <div id="inventory"></div>
+      </section>
+
+      <!-- Shared Chest (multiplayer) -->
+      <div id="shared-chest" class="glass-panel hidden">
+        <h2>Shared Chest 📦</h2>
+        <div id="chest-items"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chat Panel -->
+  <div id="chat-panel" class="hidden">
+    <div id="chat-messages"></div>
+    <input id="chat-input" placeholder="Message partner..." />
+  </div>
+
+  <!-- Discovery Modal -->
+  <div id="discovery-modal" class="hidden"></div>
+
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
+
+  <!-- Story Dialogue Overlay -->
+  <div id="story-overlay" class="hidden">
+    <div class="story-portrait">
+      <!-- CSS will handle the portrait background -->
+      <div class="portrait-name">Dr. Aris</div>
+    </div>
+    <div class="story-text-container">
+      <div id="story-text"></div>
+      <div class="story-prompt">Press SPACE to continue</div>
+    </div>
+  </div>
+
+  <!-- Journal Modal -->
+  <div id="journal-modal" class="hidden">
+    <div class="journal-content glass-panel">
+      <div class="journal-header">
+        <h2>📖 Discovery Journal</h2>
+        <button id="journal-close-btn" class="close-btn">✕</button>
+      </div>
+      <div id="journal-entries"></div>
+    </div>
+  </div>
+
+  <!-- Mini Map (top-right overlay) -->
+  <div id="mini-map">
+    <div class="minimap-grid">
+      <div class="minimap-cell forest" data-biome="forest">🌲</div>
+      <div class="minimap-cell river" data-biome="river">🌊</div>
+      <div class="minimap-cell cave" data-biome="cave">🦇</div>
+      <div class="minimap-cell coast" data-biome="coast">🏖️</div>
+    </div>
+    <div id="minimap-dot"></div>
+  </div>
+
+  <noscript>
+    <div style="position:fixed; inset:0; background:#0a0a0f; color:white; display:flex; justify-content:center; align-items:center; z-index:9999; font-family:sans-serif;">
+      <h1>JavaScript is required to play Stone World.</h1>
+    </div>
+  </noscript>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
