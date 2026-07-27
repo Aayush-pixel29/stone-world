@@ -130,6 +130,85 @@ body {
 }
 #connection-screen.fade-out { opacity: 0; visibility: hidden; }
 
+/* Anime Background */
+.anime-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  filter: brightness(0.3) blur(3px);
+  z-index: 0;
+}
+.anime-overlay-gradient {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(10,10,15,0.7), rgba(10,10,15,0.95));
+  z-index: 1;
+}
+
+/* Intro Content (replaces .connection-card) */
+.intro-content {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 460px;
+  text-align: center;
+  animation: fadeIn 0.8s ease;
+  padding: var(--spacing-lg) var(--spacing-lg) var(--spacing-md);
+}
+.glass-panel-dark {
+  background: rgba(10, 10, 20, 0.75);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 12px 50px rgba(0, 0, 0, 0.6);
+}
+
+/* Anime Title & Subtitle */
+.anime-title {
+  font-size: 2.8rem;
+  color: var(--accent-amber);
+  text-shadow: 0 0 30px var(--accent-amber-glow);
+  font-family: var(--font-mono);
+  letter-spacing: 6px;
+  margin-bottom: var(--spacing-xs);
+}
+.anime-subtitle {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-family: var(--font-mono);
+  font-style: italic;
+}
+.story-monologue {
+  margin: var(--spacing-md) 0;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-left: 3px solid var(--accent-amber);
+  text-align: left;
+}
+.story-monologue p {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+/* Anime-styled buttons */
+.anime-btn {
+  position: relative;
+  overflow: hidden;
+}
+.anime-btn::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(245,158,11,0.1), transparent);
+  transition: left 0.4s ease;
+}
+.anime-btn:hover::before {
+  left: 100%;
+}
+
 .connection-card { width: 100%; max-width: 420px; text-align: center; animation: fadeIn 0.8s ease; }
 .title-area { margin-bottom: var(--spacing-lg); }
 .title-icon { font-size: 4rem; margin-bottom: var(--spacing-sm); animation: float 3s ease-in-out infinite; }
@@ -594,6 +673,7 @@ body {
   transition: all 0.2s ease;
   width: 100px;
   height: 100px;
+  flex-shrink: 0;
   overflow: hidden;
   box-shadow: 0 4px 6px rgba(0,0,0,0.5);
   background-color: transparent;
@@ -668,6 +748,9 @@ body {
   align-items: center;
   justify-content: center;
   box-shadow: 0 4px 6px rgba(0,0,0,0.4);
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
 }
 .mobile-btn:active {
   background: rgba(245, 158, 11, 0.6);

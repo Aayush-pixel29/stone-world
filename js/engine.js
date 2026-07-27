@@ -32,6 +32,8 @@ function createDefaultState() {
     totalFailures: 0,
     craftSlots: [null, null, null], // items currently in crafting bench
     selectedProcess: 'mix',
+    myCharacter: 'scientist',
+    partnerCharacter: null,
   };
 }
 
@@ -219,17 +221,19 @@ export class GameEngine {
   setCraftSlot(slotIndex, itemId) {
     if (slotIndex < 0 || slotIndex > 2) return false;
 
-    // If slot already has an item, return it to inventory
     const currentItem = this.state.craftSlots[slotIndex];
-    if (currentItem) {
-      this.addItem(currentItem, 1);
-    }
 
     if (itemId === null) {
+      if (currentItem) {
+        this.addItem(currentItem, 1);
+      }
       this.state.craftSlots[slotIndex] = null;
     } else {
       // Remove from inventory and place in slot
       if (!this.removeItem(itemId, 1)) return false;
+      if (currentItem) {
+        this.addItem(currentItem, 1);
+      }
       this.state.craftSlots[slotIndex] = itemId;
     }
 

@@ -187,7 +187,6 @@ export class MusicEngine {
     const gain = this.ctx.createGain();
     osc.type = 'square';
     osc.connect(gain);
-    gain.connect(this.drumGain);
     
     // Bandpass filter for metallic sound
     const filter = this.ctx.createBiquadFilter();

@@ -162,19 +162,19 @@ export class UIManager {
           const modes = ['follow', 'orbit', 'top'];
           let idx = modes.indexOf(this.game3d.cameraMode) + 1;
           if (idx >= modes.length) idx = 0;
-          this.game3d.setCameraMode(modes[idx]);
+          this.game3d.cameraMode = modes[idx];
         }
       });
     }
     if (this.els.mbtnRun) {
       this.els.mbtnRun.addEventListener('touchstart', (e) => { 
         e.preventDefault(); 
-        if (this.game3d) this.game3d.keys['ShiftLeft'] = true; 
+        if (this.game3d) this.game3d.keys.run = true; 
         this.els.mbtnRun.style.backgroundColor = 'rgba(245, 158, 11, 0.6)';
       });
       this.els.mbtnRun.addEventListener('touchend', (e) => { 
         e.preventDefault(); 
-        if (this.game3d) this.game3d.keys['ShiftLeft'] = false; 
+        if (this.game3d) this.game3d.keys.run = false; 
         this.els.mbtnRun.style.backgroundColor = '';
       });
     }
@@ -356,9 +356,9 @@ export class UIManager {
       if (this.game3d && this.game3d.character && this.els.minimapDot) {
         const x = this.game3d.character.position.x;
         const z = this.game3d.character.position.z;
-        // Map -100..100 to 0..100%
-        const px = ((x + 100) / 200) * 100;
-        const py = ((z + 100) / 200) * 100;
+        // Map -500..500 to 0..100%
+        const px = ((x + 500) / 1000) * 100;
+        const py = ((z + 500) / 1000) * 100;
         this.els.minimapDot.style.left = `${px}%`;
         this.els.minimapDot.style.top = `${py}%`;
       }
@@ -686,7 +686,7 @@ export class UIManager {
 
   updateConnectionStatus(connected) {
     if (this.els.connectionStatus) {
-      this.els.connectionStatus.className = `status-dot ${connected ? 'connected' : 'disconnected'}`;
+      this.els.connectionStatus.className = `status-indicator ${connected ? 'connected' : 'disconnected'}`;
       this.els.connectionStatus.title = connected ? 'Partner connected' : 'Solo mode';
     }
   }

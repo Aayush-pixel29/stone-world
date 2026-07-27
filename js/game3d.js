@@ -57,7 +57,6 @@ export class Game3D {
     // 1. Setup Scene
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x87CEEB);
-    this.scene.fog = new THREE.Fog(0x87CEEB, 80, 180);
 
     // 2. Setup Camera
     this.camera = new THREE.PerspectiveCamera(
@@ -81,7 +80,6 @@ export class Game3D {
 
     // Fog for Atmosphere
     this.scene.fog = new THREE.FogExp2(0x87ceeb, 0.015);
-    this.container.appendChild(this.renderer.domElement);
 
     // 4. Setup Lights
     this.ambientLight = new THREE.AmbientLight(0xffe4c4, 0.5);
@@ -509,6 +507,7 @@ export class Game3D {
   setupControls() {
     // Keyboard
     window.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
       switch(e.code) {
         case 'KeyW': case 'ArrowUp': this.keys.forward = true; break;
         case 'KeyS': case 'ArrowDown': this.keys.backward = true; break;
@@ -520,6 +519,7 @@ export class Game3D {
     });
 
     window.addEventListener('keyup', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
       switch(e.code) {
         case 'KeyW': case 'ArrowUp': this.keys.forward = false; break;
         case 'KeyS': case 'ArrowDown': this.keys.backward = false; break;
@@ -629,8 +629,14 @@ export class Game3D {
     if (this.keys.backward) { moveDir.z = 1; moveIntent = true; }
     
     // Rotation
-    if (this.keys.left) { this.character.rotation.y += rotationSpeed * dt; }
-    if (this.keys.right) { this.character.rotation.y -= rotationSpeed * dt; }
+    if (this.keys.left) { 
+      this.character.rotation.y += rotationSpeed * dt; 
+      moveDir.x = -1; moveIntent = true;
+    }
+    if (this.keys.right) { 
+      this.character.rotation.y -= rotationSpeed * dt; 
+      moveDir.x = 1; moveIntent = true;
+    }
 
     this.isMoving = moveIntent;
 
