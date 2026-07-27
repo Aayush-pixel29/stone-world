@@ -549,6 +549,13 @@ export class GameEngine {
     };
   }
 
+  createMoveAction(x, z, rotY, isMoving, isRunning) {
+    return {
+      type: 'move',
+      payload: { x, z, rotY, moving: isMoving, running: isRunning },
+    };
+  }
+
   createShareAction(itemId, qty) {
     return {
       type: 'share_item',
@@ -591,6 +598,12 @@ export class GameEngine {
           text: action.payload.text,
           isPartner: true,
         });
+        break;
+      case 'move':
+        // High-frequency (network-tick-rate) updates — kept off the world
+        // log entirely and routed straight to whatever's rendering the
+        // partner's avatar (game3d, wired in app.js).
+        this.emit('partnerMove', action.payload);
         break;
       case 'sync_state':
         // Sync shared chest from host

@@ -638,12 +638,20 @@ body {
   #crafting-panel, #inventory-panel { min-height: 300px; }
   .craft-slot { width: 65px; height: 65px; }
   #inventory { grid-template-columns: repeat(4, 1fr); }
-  #world-log-float { width: 260px; max-height: 150px; }
+  /* Was bottom:40px/left:12px/width:260px, which sat directly on top of
+     #joystick-zone (bottom:40px, left:40px, 120x120). Pushed above it and
+     narrowed so the two never overlap. */
+  #world-log-float { width: 190px; max-height: 110px; bottom: 175px; left: 12px; }
   #mini-map { width: 85px; height: 85px; }
   .minimap-cell { font-size: 0.9rem; }
   #controls-help { display: none; }
   .hud-title { display: none; }
   .hud-divider { display: none; }
+  /* Craft/Explore text buttons duplicate mbtn-craft/mbtn-explore (the round
+     buttons in the mobile action zone) — hide them so there's one control
+     per action instead of two overlapping sets. */
+  #quick-inventory .action-btn { display: none; }
+  #quick-inventory { bottom: 12px; max-width: 90vw; }
 }
 
 

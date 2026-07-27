@@ -190,20 +190,23 @@ function setupMultiplayerCallbacks() {
       type: 'system',
       text: '⚠️ Your partner\'s connection was lost...',
     });
+    if (game3d) game3d.removePartner();
   };
 
   mp.onMessage = (data) => {
     if (data.type === 'characterSelect') {
       engine.state.partnerCharacter = data.payload;
-      if (game3d) {
-        // Re-init partner model if needed, or we just rely on engine.state
-        // For now, let's just log it. game3d will spawn it if it handles partners.
-        console.log("Partner selected character:", data.payload);
-      }
+      if (game3d) game3d.spawnPartner(data.payload);
     } else {
       engine.handlePartnerAction(data);
     }
   };
+
+  // Partner position/rotation updates arrive via engine's 'move' handler,
+  // which re-emits them as 'partnerMove' (kept off the world log — see engine.js).
+  engine.on('partnerMove', (payload) => {
+    if (game3d) game3d.updatePartnerTransform(payload);
+  });
 
   mp.onError = (err) => {
     ui.showToast(err.message, 'fail');
@@ -273,7 +276,22 @@ function startGame() {
       engine.state.currentBiome = biomeId; // Update engine state
       ui.updateBiomeHighlight(biomeId); // Update UI visuals
     };
-    
+
+    // Broadcast our position/rotation to the partner at a throttled rate (game3d
+    // handles the 10Hz throttling internally — see _moveSendInterval).
+    game3d.onLocalMove = (x, z, rotY, moving, running) => {
+      if (isMultiplayer && mp.connected) {
+        mp.send(engine.createMoveAction(x, z, rotY, moving, running));
+      }
+    };
+
+    // If a partner is already connected and had already sent their character
+    // choice before our 3D scene existed, spawn them now instead of waiting
+    // on a message that already arrived.
+    if (isMultiplayer && engine.state.partnerCharacter) {
+      game3d.spawnPartner(engine.state.partnerCharacter);
+    }
+
     // Give UI access to game3d for minimap position tracking
     ui.setGame3D(game3d);
   }

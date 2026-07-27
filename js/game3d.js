@@ -1,4 +1,8 @@
 import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 export class Game3D {
   constructor(canvasContainer, engine = null) {
@@ -40,6 +44,21 @@ export class Game3D {
     // Animation state
     this.walkCycle = 0;
     this.time = 0;
+
+    // Partner avatar (multiplayer) — see spawnPartner/updatePartnerTransform
+    this.partner = null;
+    this.partnerParts = null;
+    this.partnerCharId = null;
+    this.partnerTarget = { x: 2, z: 2, rotY: 0 };
+    this.partnerMoving = false;
+    this.partnerRunning = false;
+    this.partnerWalkCycle = 0;
+
+    // Outgoing position broadcast (set by app.js): onLocalMove(x, z, rotY, moving, running)
+    this.onLocalMove = null;
+    this._moveSendAccum = 0;
+    this._moveSendInterval = 0.1; // 10Hz — plenty smooth for a WebRTC data channel, low bandwidth
+    this._lastSentMoving = null;
     
     // Camera state
     this.cameraTarget = new THREE.Vector3();
@@ -81,6 +100,23 @@ export class Game3D {
     // Fog for Atmosphere
     this.scene.fog = new THREE.FogExp2(0x87ceeb, 0.015);
 
+    // Bloom (torch + fireflies glow). Skipped on mobile — a bloom pass chains
+    // several full-screen blur passes, which is a meaningful GPU cost on phone
+    // hardware; not worth it against the mobile performance goals of this pass.
+    this.isMobile = window.innerWidth < 769 || 'ontouchstart' in window;
+    if (!this.isMobile) {
+      this.composer = new EffectComposer(this.renderer);
+      this.composer.addPass(new RenderPass(this.scene, this.camera));
+      this.bloomPass = new UnrealBloomPass(
+        new THREE.Vector2(this.container.clientWidth, this.container.clientHeight),
+        0.5,  // strength (tuned dynamically for day/night in update())
+        0.5,  // radius
+        0.9   // threshold — high by default so daytime sky/terrain don't bloom
+      );
+      this.composer.addPass(this.bloomPass);
+      this.composer.addPass(new OutputPass()); // applies tone mapping + color space, since intermediate render targets don't
+    }
+
     // 4. Setup Lights
     this.ambientLight = new THREE.AmbientLight(0xffe4c4, 0.5);
     this.scene.add(this.ambientLight);
@@ -112,6 +148,7 @@ export class Game3D {
     this.createVegetation();
     this.createCharacter();
     this.createParticles();
+    this.createTorchGlow();
 
     // 6. Setup Controls & Events
     this.setupControls();
@@ -308,12 +345,26 @@ export class Game3D {
   }
 
   createCharacter() {
-    this.character = new THREE.Group();
-    this.characterParts = {}; // Store parts for animation
-    
-    // Determine character preset
     const charId = this.engine && this.engine.state.myCharacter ? this.engine.state.myCharacter : 'scientist';
-    
+    const { group, parts } = this.buildCharacterMesh(charId);
+    this.character = group;
+    this.characterParts = parts;
+
+    // Initial position
+    this.character.position.set(0, 0, 0);
+    // Face forward
+    this.character.rotation.y = Math.PI;
+
+    this.scene.add(this.character);
+  }
+
+  // Builds a character rig for the given preset without touching this.character —
+  // used for both the local player (createCharacter) and the partner (spawnPartner),
+  // so the two avatars are guaranteed to look/animate identically.
+  buildCharacterMesh(charId) {
+    const character = new THREE.Group();
+    const parts = {}; // Store parts for animation
+
     let skinColor = 0xffb380;
     let shirtColor = 0x3b82f6;
     let pantsColor = 0x78350f;
@@ -348,8 +399,8 @@ export class Game3D {
     const body = new THREE.Mesh(bodyGeo, shirtMat);
     body.position.y = 1.5; // Offset from ground (legs are ~0.9)
     body.castShadow = true;
-    this.character.add(body);
-    this.characterParts.body = body;
+    character.add(body);
+    parts.body = body;
 
     // Head
     const headGroup = new THREE.Group();
@@ -360,7 +411,7 @@ export class Game3D {
     const head = new THREE.Mesh(headGeo, skinMat);
     head.castShadow = true;
     headGroup.add(head);
-    this.characterParts.headGroup = headGroup;
+    parts.headGroup = headGroup;
 
     // Hair (Custom based on character)
     let hairGeo;
@@ -400,13 +451,13 @@ export class Game3D {
     armL.position.set(-0.65, 0.5, 0);
     armL.castShadow = true;
     body.add(armL);
-    this.characterParts.armL = armL;
+    parts.armL = armL;
     
     const armR = new THREE.Mesh(armGeo, skinMat);
     armR.position.set(0.65, 0.5, 0);
     armR.castShadow = true;
     body.add(armR);
-    this.characterParts.armR = armR;
+    parts.armR = armR;
 
     // Legs
     const legGeo = new THREE.BoxGeometry(0.35, 0.9, 0.35);
@@ -416,29 +467,68 @@ export class Game3D {
     legL.position.set(-0.25, -0.6, 0);
     legL.castShadow = true;
     body.add(legL);
-    this.characterParts.legL = legL;
+    parts.legL = legL;
     
     const legR = new THREE.Mesh(legGeo, pantsMat);
     legR.position.set(0.25, -0.6, 0);
     legR.castShadow = true;
     body.add(legR);
-    this.characterParts.legR = legR;
+    parts.legR = legR;
 
-    // Initial position
-    this.character.position.set(0, 0, 0);
-    // Face forward
-    this.character.rotation.y = Math.PI;
-    
-    this.scene.add(this.character);
+    return { group: character, parts };
+  }
+
+  // Adds/updates the partner's avatar in the scene. Called when a
+  // 'characterSelect' message arrives (see app.js). Rebuilds the mesh if the
+  // partner switches character mid-game; otherwise a no-op.
+  spawnPartner(charId) {
+    if (this.partner && this.partnerCharId === charId) return;
+
+    if (this.partner) {
+      this.scene.remove(this.partner);
+      this.partner = null;
+      this.partnerParts = null;
+    }
+
+    const { group, parts } = this.buildCharacterMesh(charId);
+    this.partnerCharId = charId;
+    this.partner = group;
+    this.partnerParts = parts;
+
+    // Spawn a little offset from origin so the two avatars aren't fully
+    // overlapping before the first 'move' packet arrives.
+    this.partner.position.set(this.partnerTarget.x, 0, this.partnerTarget.z);
+    this.partner.rotation.y = this.partnerTarget.rotY;
+    this.scene.add(this.partner);
+  }
+
+  // Called from app.js whenever a 'move' packet arrives from the partner.
+  // Stores the target transform; update() smoothly interpolates toward it
+  // every frame so motion looks continuous between network ticks.
+  updatePartnerTransform({ x, z, rotY, moving, running }) {
+    this.partnerTarget.x = x;
+    this.partnerTarget.z = z;
+    this.partnerTarget.rotY = rotY;
+    this.partnerMoving = !!moving;
+    this.partnerRunning = !!running;
+  }
+
+  removePartner() {
+    if (this.partner) {
+      this.scene.remove(this.partner);
+      this.partner = null;
+      this.partnerParts = null;
+      this.partnerCharId = null;
+    }
   }
 
   createWater() {
     const waterMat = new THREE.MeshStandardMaterial({
-      color: 0x3b82f6,
+      color: 0x2563a8,
       transparent: true,
-      opacity: 0.6,
-      roughness: 0.1,
-      metalness: 0.8
+      opacity: 0.75,
+      roughness: 0.15,
+      metalness: 0.05 // near-zero: metalness needs an envMap to read as reflective; without one it just looks dark
     });
 
     // River (NE quadrant)
@@ -502,6 +592,14 @@ export class Game3D {
         offset: Math.random() * Math.PI * 2
       });
     }
+  }
+
+  createTorchGlow() {
+    const geo = new THREE.SphereGeometry(0.18, 8, 8);
+    const mat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
+    this.torchGlowMesh = new THREE.Mesh(geo, mat);
+    this.torchGlowMesh.visible = false;
+    this.scene.add(this.torchGlowMesh);
   }
 
   setupControls() {
@@ -690,6 +788,51 @@ export class Game3D {
       this.characterParts.body.position.y = 1.5 + Math.sin(this.time * 2) * 0.05;
     }
 
+    // --- BROADCAST LOCAL POSITION (multiplayer) ---
+    // Throttled to 10Hz regardless of frame rate — enough for smooth remote
+    // interpolation without flooding the WebRTC data channel.
+    this._moveSendAccum += dt;
+    if (this.onLocalMove && this._moveSendAccum >= this._moveSendInterval) {
+      this._moveSendAccum = 0;
+      this.onLocalMove(
+        this.character.position.x,
+        this.character.position.z,
+        this.character.rotation.y,
+        this.isMoving,
+        this.keys.run
+      );
+    }
+
+    // --- PARTNER AVATAR (multiplayer) ---
+    if (this.partner) {
+      const followLerp = Math.min(1, dt * 8);
+      this.partner.position.x = THREE.MathUtils.lerp(this.partner.position.x, this.partnerTarget.x, followLerp);
+      this.partner.position.z = THREE.MathUtils.lerp(this.partner.position.z, this.partnerTarget.z, followLerp);
+      this.partner.position.y = this.getTerrainHeight(this.partner.position.x, this.partner.position.z);
+
+      // Shortest-path rotation lerp so it doesn't spin the long way around at the wrap point
+      let deltaRot = this.partnerTarget.rotY - this.partner.rotation.y;
+      deltaRot = ((deltaRot + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
+      this.partner.rotation.y += deltaRot * followLerp;
+
+      if (this.partnerMoving) {
+        this.partnerWalkCycle += dt * (this.partnerRunning ? 15 : 10);
+        const armSwing = Math.sin(this.partnerWalkCycle) * 0.5;
+        this.partnerParts.armL.rotation.x = armSwing;
+        this.partnerParts.armR.rotation.x = -armSwing;
+        this.partnerParts.legL.rotation.x = -armSwing;
+        this.partnerParts.legR.rotation.x = armSwing;
+        this.partnerParts.body.position.y = 1.5 + Math.abs(Math.sin(this.partnerWalkCycle)) * 0.1;
+      } else {
+        this.partnerWalkCycle = 0;
+        this.partnerParts.armL.rotation.x = THREE.MathUtils.lerp(this.partnerParts.armL.rotation.x, 0, dt * 5);
+        this.partnerParts.armR.rotation.x = THREE.MathUtils.lerp(this.partnerParts.armR.rotation.x, 0, dt * 5);
+        this.partnerParts.legL.rotation.x = THREE.MathUtils.lerp(this.partnerParts.legL.rotation.x, 0, dt * 5);
+        this.partnerParts.legR.rotation.x = THREE.MathUtils.lerp(this.partnerParts.legR.rotation.x, 0, dt * 5);
+        this.partnerParts.body.position.y = 1.5 + Math.sin(this.time * 2) * 0.05;
+      }
+    }
+
     // --- CAMERA ---
     let targetCamPos = new THREE.Vector3();
     const charPos = this.character.position.clone();
@@ -721,16 +864,22 @@ export class Game3D {
     this.camera.lookAt(this.cameraTarget);
 
     // --- WATER WAVES ---
+    // NOTE: geometry.rotateX(-PI/2) was baked into these planes at creation time,
+    // which moves world-up into the local Y axis and leaves the plane's long
+    // axis in local Z. Animating Z (as this used to do) overwrote that long-axis
+    // span with a tiny +-0.1 value every frame, collapsing the whole mesh into
+    // a near-zero-width sliver. Y is the correct axis to perturb for a vertical wave.
     this.waterMeshes.forEach((mesh, idx) => {
       const positions = mesh.geometry.attributes.position;
       for (let i = 0; i < positions.count; i++) {
         const x = positions.getX(i);
-        const y = positions.getY(i);
-        // Animate Z (which is up because plane is rotated)
-        const wave = Math.sin(x * 0.5 + this.time * 2 + idx) * 0.1;
-        positions.setZ(i, wave);
+        const z = positions.getZ(i);
+        const wave = Math.sin(x * 0.4 + this.time * 1.6 + idx) * 0.12
+                    + Math.sin(z * 0.25 - this.time * 1.1 + idx * 2) * 0.08;
+        positions.setY(i, wave);
       }
-      mesh.geometry.attributes.position.needsUpdate = true;
+      positions.needsUpdate = true;
+      mesh.geometry.computeVertexNormals(); // keep lighting responsive to the waves
     });
 
     // --- PARTICLES ---
@@ -799,13 +948,34 @@ export class Game3D {
         this.torchLight.distance = hasLamp ? 25 : 15;
         this.torchLight.position.copy(charPos);
         this.torchLight.position.y += 2;
+
+        if (this.torchGlowMesh) {
+          this.torchGlowMesh.visible = true;
+          this.torchGlowMesh.position.copy(this.torchLight.position);
+          this.torchGlowMesh.material.color.setHex(hasLamp ? 0xffffee : 0xffaa00);
+        }
       } else {
         this.torchLight.intensity = 0;
+        if (this.torchGlowMesh) this.torchGlowMesh.visible = false;
+      }
+
+      // Bloom reads as atmospheric glow at night (torch + fireflies against a
+      // dark sky); kept subtle and high-threshold in daylight so the bright
+      // sky/terrain don't blow out.
+      if (this.bloomPass) {
+        const targetStrength = isNight ? 0.8 : 0.12;
+        const targetThreshold = isNight ? 0.55 : 0.92;
+        this.bloomPass.strength = THREE.MathUtils.lerp(this.bloomPass.strength, targetStrength, dt * 2);
+        this.bloomPass.threshold = THREE.MathUtils.lerp(this.bloomPass.threshold, targetThreshold, dt * 2);
       }
     }
 
     // Render
-    this.renderer.render(this.scene, this.camera);
+    if (this.composer) {
+      this.composer.render();
+    } else {
+      this.renderer.render(this.scene, this.camera);
+    }
   }
 
   resize() {
@@ -813,12 +983,14 @@ export class Game3D {
     this.camera.aspect = this.container.clientWidth / this.container.clientHeight;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
+    if (this.composer) this.composer.setSize(this.container.clientWidth, this.container.clientHeight);
   }
 
   destroy() {
     this.renderer.setAnimationLoop(null);
     window.removeEventListener('resize', this.resize);
     // basic cleanup...
+    if (this.composer) this.composer.dispose();
     this.renderer.dispose();
   }
 }
