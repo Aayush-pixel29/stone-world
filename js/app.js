@@ -166,6 +166,10 @@ function setupMultiplayerCallbacks() {
     ui.showSharedChest();
     ui.showChat();
     
+    // Show mic buttons
+    if (ui.els.btnMic) ui.els.btnMic.classList.remove('hidden');
+    if (ui.els.mbtnMute) ui.els.mbtnMute.classList.remove('hidden');
+
     // Send our character choice immediately
     mp.send({
       type: 'characterSelect',
@@ -241,6 +245,22 @@ function startGame() {
   // Start Story & Music
   story.init();
   music.start();
+
+  // Show mobile controls if on small screen
+  if (window.innerWidth < 769) {
+    document.getElementById('mobile-controls').classList.remove('hidden');
+  }
+
+  const toggleMic = () => {
+    if (isMultiplayer) {
+      const isMuted = mp.toggleMute();
+      if (ui.els.btnMic) ui.els.btnMic.innerText = isMuted ? '🔇' : '🎤';
+      if (ui.els.mbtnMute) ui.els.mbtnMute.innerText = isMuted ? '🔇' : '🎤';
+    }
+  };
+
+  if (ui.els.btnMic) ui.els.btnMic.addEventListener('click', toggleMic);
+  if (ui.els.mbtnMute) ui.els.mbtnMute.addEventListener('touchstart', (e) => { e.preventDefault(); toggleMic(); });
 
   // Initialize 3D Engine
   const canvasContainer = document.getElementById('game-canvas');

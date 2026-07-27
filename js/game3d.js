@@ -75,6 +75,12 @@ export class Game3D {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.0;
+    this.container.appendChild(this.renderer.domElement);
+
+    // Fog for Atmosphere
+    this.scene.fog = new THREE.FogExp2(0x87ceeb, 0.015);
     this.container.appendChild(this.renderer.domElement);
 
     // 4. Setup Lights
@@ -87,8 +93,8 @@ export class Game3D {
     this.dirLight = new THREE.DirectionalLight(0xfff5e6, 1.2);
     this.dirLight.position.set(50, 80, 50);
     this.dirLight.castShadow = true;
-    this.dirLight.shadow.mapSize.width = 2048;
-    this.dirLight.shadow.mapSize.height = 2048;
+    this.dirLight.shadow.mapSize.width = 4096;
+    this.dirLight.shadow.mapSize.height = 4096;
     this.dirLight.shadow.camera.near = 0.5;
     this.dirLight.shadow.camera.far = 250;
     const d = 100;
@@ -543,8 +549,51 @@ export class Game3D {
       }
     });
 
+    // Joystick Setup
+    if (window.nipplejs && window.innerWidth < 769) {
+      this.setupJoystick();
+    }
+
     // Prevent context menu on right click
     this.container.addEventListener('contextmenu', e => e.preventDefault());
+  }
+
+  setupJoystick() {
+    const zone = document.getElementById('joystick-zone');
+    if (!zone) return;
+    
+    const manager = window.nipplejs.create({
+      zone: zone,
+      mode: 'static',
+      position: { left: '50%', top: '50%' },
+      color: 'white'
+    });
+
+    manager.on('move', (evt, data) => {
+      const angle = data.angle.degree;
+      const force = data.force;
+      
+      // Reset keys
+      this.keys.forward = false;
+      this.keys.backward = false;
+      this.keys.left = false;
+      this.keys.right = false;
+
+      // Map joystick angle to WASD/Arrows
+      if (force > 0.2) {
+        if (angle > 45 && angle < 135) this.keys.forward = true;
+        if (angle > 225 && angle < 315) this.keys.backward = true;
+        if (angle >= 135 && angle <= 225) this.keys.left = true;
+        if (angle <= 45 || angle >= 315) this.keys.right = true;
+      }
+    });
+
+    manager.on('end', () => {
+      this.keys.forward = false;
+      this.keys.backward = false;
+      this.keys.left = false;
+      this.keys.right = false;
+    });
   }
 
   cycleCameraMode() {

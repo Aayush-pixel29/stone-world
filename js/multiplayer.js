@@ -2,30 +2,121 @@ export class MultiplayerManager {
   constructor() {
     this.peer = null;
     this.connection = null;
+    this.mediaConnection = null;
+    this.localStream = null;
+    
     this.isHost = false;
     this.roomCode = '';
     this.connected = false;
-    this.onMessage = null;      // callback: (data) => {}
-    this.onConnect = null;      // callback: () => {}
-    this.onDisconnect = null;   // callback: () => {}
-    this.onError = null;        // callback: (error) => {}
-    
-    this._heartbeatInterval = null;
-    this._heartbeatTimeout = null;
-    this._reconnectRetries = 0;
-    this._maxRetries = 3;
+
+    this.onConnect = null;
+    this.onDisconnect = null;
+    this.onMessage = null;
+    this.onError = null;
+
     this._targetRoomCode = null;
+  }
+
+  async getMicrophone() {
+    try {
+      this.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    } catch (err) {
+      console.warn("Could not get microphone access:", err);
+    }
   }
 
   async loadPeerJS() {
     if (window.Peer) return;
     return new Promise((resolve, reject) => {
       const script = document.createElement('script');
-      script.src = 'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js';
+      script.src = 'https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js';
       script.onload = resolve;
-      script.onerror = () => reject(new Error('Failed to load PeerJS'));
+      script.onerror = reject;
       document.head.appendChild(script);
     });
+  }
+
+  async host() {
+    await this.loadPeerJS();
+    await this.getMicrophone();
+    this.isHost = true;
+    this.roomCode = this._generateRoomCode();
+    
+    return new Promise((resolve, reject) => {
+      this.peer = new Peer('stoneworld-' + this.roomCode);
+
+      this.peer.on('open', (id) => {
+        resolve(this.roomCode);
+        
+        // Handle Data Connection
+        this.peer.on('connection', (conn) => {
+          this.connection = conn;
+          this._setupConnection(conn);
+        });
+
+        // Handle Media (Voice) Connection
+        this.peer.on('call', (call) => {
+          this.mediaConnection = call;
+          if (this.localStream) {
+            call.answer(this.localStream);
+          } else {
+            // Answer without stream just to accept
+            call.answer();
+          }
+          call.on('stream', (remoteStream) => {
+            this.playRemoteStream(remoteStream);
+          });
+        });
+
+        this.peer.on('error', (err) => {
+          this._handleError(err);
+          reject(err);
+        });
+      });
+    });
+  }
+
+  async join(roomCode) {
+    await this.loadPeerJS();
+    await this.getMicrophone();
+    this.isHost = false;
+    this.roomCode = roomCode.toUpperCase();
+    this._targetRoomCode = this.roomCode;
+    
+    return new Promise((resolve, reject) => {
+      this.peer = new Peer();
+
+      this.peer.on('open', (id) => {
+        // Try to connect to host
+        setTimeout(() => {
+          const conn = this.peer.connect('stoneworld-' + this.roomCode, { reliable: true });
+          this._setupConnection(conn);
+          
+          conn.on('open', () => {
+            // Call the host for voice chat
+            if (this.localStream) {
+              this.mediaConnection = this.peer.call('stoneworld-' + this.roomCode, this.localStream);
+              this.mediaConnection.on('stream', (remoteStream) => {
+                this.playRemoteStream(remoteStream);
+              });
+            }
+            resolve();
+          });
+          conn.on('error', (err) => reject(err));
+        }, 500); // Small delay to let PeerJS stabilize
+      });
+
+      this.peer.on('error', (err) => {
+        this._handleError(err);
+        reject(err);
+      });
+    });
+  }
+
+  send(data) {
+    if (this.connected && this.connection) {
+      this.connection.send(data);
+    }
   }
 
   _generateRoomCode() {
@@ -37,200 +128,59 @@ export class MultiplayerManager {
     return code;
   }
 
-  async host() {
-    await this.loadPeerJS();
-    this.isHost = true;
-    this.roomCode = this._generateRoomCode();
-    
-    return new Promise((resolve, reject) => {
-      try {
-        this.peer = new window.Peer('stoneworld-' + this.roomCode);
-        
-        this.peer.on('open', (id) => {
-          resolve(this.roomCode);
-        });
-
-        this.peer.on('connection', (conn) => {
-          if (this.connection) {
-            conn.close(); // Only allow one connection per host for simple setup
-            return;
-          }
-          this._setupConnection(conn);
-        });
-
-        this.peer.on('error', (err) => {
-          this._handleError(err);
-          reject(err);
-        });
-      } catch (e) {
-        reject(e);
-      }
-    });
-  }
-
-  async join(roomCode) {
-    await this.loadPeerJS();
-    this.isHost = false;
-    this.roomCode = roomCode.toUpperCase();
-    this._targetRoomCode = this.roomCode;
-    this._reconnectRetries = 0;
-
-    return this._connectToHost();
-  }
-
-  _connectToHost() {
-    return new Promise((resolve, reject) => {
-      try {
-        if (!this.peer || this.peer.destroyed) {
-          this.peer = new window.Peer();
-        }
-
-        const onOpen = () => {
-          const conn = this.peer.connect('stoneworld-' + this.roomCode, { reliable: true });
-          this._setupConnection(conn);
-          
-          conn.on('open', () => resolve());
-          conn.on('error', (err) => reject(err));
-        };
-
-        if (this.peer.open) {
-          onOpen();
-        } else {
-          this.peer.once('open', onOpen);
-          this.peer.once('error', (err) => {
-            this._handleError(err);
-            reject(err);
-          });
-        }
-      } catch (e) {
-        reject(e);
-      }
-    });
-  }
-
   _setupConnection(conn) {
-    this.connection = conn;
-
-    this.connection.on('open', () => {
+    conn.on('open', () => {
       this.connected = true;
-      this._reconnectRetries = 0;
       if (this.onConnect) this.onConnect();
-      this._startHeartbeat();
     });
 
-    this.connection.on('data', (data) => {
-      if (typeof data === 'string') {
-        try {
-          data = JSON.parse(data);
-        } catch (e) {}
-      }
-
-      this._resetHeartbeatTimeout();
-
-      if (data && data.type === 'heartbeat') {
-        return; // Handled by resetting timeout
-      }
-
-      if (this.onMessage && data) {
-        this.onMessage(data);
-      }
+    conn.on('data', (data) => {
+      if (this.onMessage) this.onMessage(data);
     });
 
-    this.connection.on('close', () => {
+    conn.on('close', () => {
       this._handleDisconnect();
     });
-
-    this.connection.on('error', (err) => {
+    
+    conn.on('error', (err) => {
       this._handleError(err);
     });
   }
 
-  send(data) {
-    if (!this.connected || !this.connection) return;
-    
-    const payload = {
-      ...data,
-      timestamp: Date.now()
-    };
-    
-    this.connection.send(JSON.stringify(payload));
-  }
-
-  _startHeartbeat() {
-    this._stopHeartbeat();
-    
-    this._heartbeatInterval = setInterval(() => {
-      this.send({ type: 'heartbeat', payload: null });
-    }, 5000);
-
-    this._resetHeartbeatTimeout();
-  }
-
-  _resetHeartbeatTimeout() {
-    if (this._heartbeatTimeout) {
-      clearTimeout(this._heartbeatTimeout);
+  _handleError(err) {
+    console.error("PeerJS Error:", err);
+    if (err.type === 'peer-unavailable') {
+      err.message = "Room not found.";
     }
-    
-    this._heartbeatTimeout = setTimeout(() => {
-      // 15s silence
-      this._handleDisconnect();
-    }, 15000);
-  }
-
-  _stopHeartbeat() {
-    if (this._heartbeatInterval) clearInterval(this._heartbeatInterval);
-    if (this._heartbeatTimeout) clearTimeout(this._heartbeatTimeout);
+    if (this.onError) this.onError(err);
   }
 
   _handleDisconnect() {
-    if (!this.connected) return;
     this.connected = false;
-    this._stopHeartbeat();
-    
-    if (this.connection) {
-      this.connection.close();
-      this.connection = null;
-    }
-
-    if (this.onDisconnect) {
-      this.onDisconnect();
-    }
-
-    if (!this.isHost && this._reconnectRetries < this._maxRetries) {
-      this._reconnectRetries++;
-      setTimeout(() => {
-        this._connectToHost().catch(() => {});
-      }, 2000 * this._reconnectRetries);
-    }
+    this.connection = null;
+    this.mediaConnection = null;
+    if (this.onDisconnect) this.onDisconnect();
   }
 
-  _handleError(err) {
-    let friendlyMessage = 'A multiplayer error occurred.';
-    if (err.type === 'peer-unavailable') {
-      friendlyMessage = 'Room not found. Check the code and try again.';
-    } else if (err.type === 'network') {
-      friendlyMessage = 'Network connection lost.';
+  playRemoteStream(stream) {
+    let audio = document.getElementById('partner-voice');
+    if (!audio) {
+      audio = document.createElement('audio');
+      audio.id = 'partner-voice';
+      audio.autoplay = true;
+      document.body.appendChild(audio);
     }
-
-    if (this.onError) {
-      this.onError({ originalError: err, message: friendlyMessage });
-    }
+    audio.srcObject = stream;
   }
 
-  disconnect() {
-    this._stopHeartbeat();
-    this.connected = false;
-    this._reconnectRetries = this._maxRetries; // prevent reconnection
-    
-    if (this.connection) {
-      this.connection.close();
-      this.connection = null;
+  toggleMute() {
+    if (this.localStream) {
+      const audioTrack = this.localStream.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        return !audioTrack.enabled; // returns true if muted
+      }
     }
-    if (this.peer) {
-      this.peer.destroy();
-      this.peer = null;
-    }
+    return false;
   }
 }
-
-export default MultiplayerManager;

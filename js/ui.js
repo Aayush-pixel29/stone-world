@@ -71,7 +71,9 @@ export class UIManager {
       'crafting-overlay', 'close-crafting-btn', 'journal-close-btn',
       'mini-map', 'minimap-dot',
       'objective-tracker', 'obj-main', 'obj-sub',
-      'story-overlay', 'story-text'
+      'story-overlay', 'story-text',
+      'mobile-controls', 'mbtn-cam', 'mbtn-run', 'mbtn-explore', 'mbtn-craft', 'mbtn-mute',
+      'btn-mic'
     ];
     ids.forEach(id => {
       this.els[this.camelCase(id)] = document.getElementById(id);
@@ -145,6 +147,37 @@ export class UIManager {
         this.handleExplore();
       }
     });
+
+    // Mobile button listeners
+    if (this.els.mbtnExplore) {
+      this.els.mbtnExplore.addEventListener('touchstart', (e) => { e.preventDefault(); this.handleExplore(); });
+    }
+    if (this.els.mbtnCraft) {
+      this.els.mbtnCraft.addEventListener('touchstart', (e) => { e.preventDefault(); this.toggleCrafting(); });
+    }
+    if (this.els.mbtnCam) {
+      this.els.mbtnCam.addEventListener('touchstart', (e) => { 
+        e.preventDefault(); 
+        if (this.game3d) {
+          const modes = ['follow', 'orbit', 'top'];
+          let idx = modes.indexOf(this.game3d.cameraMode) + 1;
+          if (idx >= modes.length) idx = 0;
+          this.game3d.setCameraMode(modes[idx]);
+        }
+      });
+    }
+    if (this.els.mbtnRun) {
+      this.els.mbtnRun.addEventListener('touchstart', (e) => { 
+        e.preventDefault(); 
+        if (this.game3d) this.game3d.keys['ShiftLeft'] = true; 
+        this.els.mbtnRun.style.backgroundColor = 'rgba(245, 158, 11, 0.6)';
+      });
+      this.els.mbtnRun.addEventListener('touchend', (e) => { 
+        e.preventDefault(); 
+        if (this.game3d) this.game3d.keys['ShiftLeft'] = false; 
+        this.els.mbtnRun.style.backgroundColor = '';
+      });
+    }
 
     // Explore button
     if (this.els.exploreBtn) {

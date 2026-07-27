@@ -44,17 +44,14 @@
       <div class="character-selection">
         <p class="char-select-title">CHOOSE YOUR SURVIVOR</p>
         <div class="char-cards">
-          <div class="char-card selected" data-char="scientist">
-            <div class="char-emoji">🧪</div>
-            <div class="char-name">Scientist</div>
+          <div class="char-card selected" data-char="scientist" style="background-image: url('img/scientist.png')">
+            <div class="char-name-badge">Scientist</div>
           </div>
-          <div class="char-card" data-char="brawn">
-            <div class="char-emoji">💪</div>
-            <div class="char-name">Brawn</div>
+          <div class="char-card" data-char="brawn" style="background-image: url('img/brawn.png')">
+            <div class="char-name-badge">Brawn</div>
           </div>
-          <div class="char-card" data-char="scout">
-            <div class="char-emoji">🦅</div>
-            <div class="char-name">Scout</div>
+          <div class="char-card" data-char="scout" style="background-image: url('img/scout.png')">
+            <div class="char-name-badge">Scout</div>
           </div>
         </div>
       </div>
@@ -117,8 +114,11 @@
       </div>
     </div>
     <div class="hud-right">
-      <span id="connection-status" class="status-dot disconnected" title="Solo mode"></span>
-      <button id="journal-btn" class="hud-btn" title="Journal">📖</button>
+      <div id="connection-status" class="status-indicator disconnected">
+        <span class="status-dot"></span>
+        <span class="status-text">Disconnected</span>
+      </div>
+      <button id="btn-mic" class="hud-btn hidden" title="Toggle Microphone">🎤</button>
       <button id="audio-toggle" class="hud-btn" title="Toggle audio">🔊</button>
       <button id="new-game-btn" class="hud-btn" title="New Game">🔄</button>
     </div>
@@ -218,11 +218,21 @@
   <!-- Journal Modal -->
   <div id="journal-modal" class="hidden">
     <div class="journal-content glass-panel">
-      <div class="journal-header">
-        <h2>📖 Discovery Journal</h2>
-        <button id="journal-close-btn" class="close-btn">✕</button>
-      </div>
+      <h2>Survival Journal</h2>
       <div id="journal-entries"></div>
+      <button id="journal-close-btn" class="hud-btn">Close</button>
+    </div>
+  </div>
+
+  <!-- Mobile Controls -->
+  <div id="mobile-controls" class="hidden">
+    <div id="joystick-zone"></div>
+    <div class="action-buttons-zone">
+      <button id="mbtn-cam" class="mobile-btn">📷</button>
+      <button id="mbtn-run" class="mobile-btn">🏃</button>
+      <button id="mbtn-explore" class="mobile-btn main-btn">E</button>
+      <button id="mbtn-craft" class="mobile-btn">🛠️</button>
+      <button id="mbtn-mute" class="mobile-btn hidden">🎤</button>
     </div>
   </div>
 
@@ -243,6 +253,7 @@
     </div>
   </noscript>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
   <script type="module" src="js/app.js"></script>
 </body>
 </html>
