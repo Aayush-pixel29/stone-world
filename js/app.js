@@ -75,6 +75,20 @@ function setupConnectionScreen() {
   const soloBtn = document.getElementById('solo-btn');
   const joinConnectBtn = document.getElementById('join-connect-btn');
   const joinCodeInput = document.getElementById('join-code-input');
+  
+  // Character Selection
+  const charCards = document.querySelectorAll('.char-card');
+  charCards.forEach(card => {
+    card.addEventListener('click', () => {
+      charCards.forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      engine.state.myCharacter = card.dataset.char;
+      audio.playClick();
+    });
+  });
+
+  // Default character
+  engine.state.myCharacter = 'scientist';
 
   // HOST
   hostBtn?.addEventListener('click', async () => {
@@ -151,6 +165,13 @@ function setupMultiplayerCallbacks() {
     ui.updateConnectionStatus(true);
     ui.showSharedChest();
     ui.showChat();
+    
+    // Send our character choice immediately
+    mp.send({
+      type: 'characterSelect',
+      payload: engine.state.myCharacter
+    });
+
     engine.emit('log', {
       type: 'partner',
       text: '🤝 A fellow survivor has awoken! You are no longer alone.',
@@ -168,7 +189,16 @@ function setupMultiplayerCallbacks() {
   };
 
   mp.onMessage = (data) => {
-    engine.handlePartnerAction(data);
+    if (data.type === 'characterSelect') {
+      engine.state.partnerCharacter = data.payload;
+      if (game3d) {
+        // Re-init partner model if needed, or we just rely on engine.state
+        // For now, let's just log it. game3d will spawn it if it handles partners.
+        console.log("Partner selected character:", data.payload);
+      }
+    } else {
+      engine.handlePartnerAction(data);
+    }
   };
 
   mp.onError = (err) => {

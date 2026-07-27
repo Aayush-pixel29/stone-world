@@ -305,12 +305,38 @@ export class Game3D {
 
   createCharacter() {
     this.character = new THREE.Group();
+    this.characterParts = {}; // Store parts for animation
     
+    // Determine character preset
+    const charId = this.engine && this.engine.state.myCharacter ? this.engine.state.myCharacter : 'scientist';
+    
+    let skinColor = 0xffb380;
+    let shirtColor = 0x3b82f6;
+    let pantsColor = 0x78350f;
+    let hairColor = 0x4a2c0a;
+    
+    if (charId === 'scientist') {
+      skinColor = 0xffe0bd; // Fair
+      shirtColor = 0xd4c4a8; // Beige tunic
+      pantsColor = 0x2d3748; // Dark gray pants
+      hairColor = 0x86efac; // Light green (Senku style)
+    } else if (charId === 'brawn') {
+      skinColor = 0xdda15e; // Tan
+      shirtColor = 0x991b1b; // Red tunic
+      pantsColor = 0x451a03; // Dark brown pants
+      hairColor = 0x291402; // Dark brown hair
+    } else if (charId === 'scout') {
+      skinColor = 0xffe4c4; // Fair
+      shirtColor = 0x2563eb; // Blue tunic
+      pantsColor = 0x1e3a8a; // Dark blue skirt/pants
+      hairColor = 0xfde047; // Blonde hair
+    }
+
     // Materials
-    const skinMat = new THREE.MeshStandardMaterial({ color: 0xffb380, roughness: 0.6 });
-    const shirtMat = new THREE.MeshStandardMaterial({ color: 0x3b82f6, roughness: 0.7 });
-    const pantsMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.8 });
-    const hairMat = new THREE.MeshStandardMaterial({ color: 0x4a2c0a, roughness: 0.9 });
+    const skinMat = new THREE.MeshStandardMaterial({ color: skinColor, roughness: 0.6 });
+    const shirtMat = new THREE.MeshStandardMaterial({ color: shirtColor, roughness: 0.7 });
+    const pantsMat = new THREE.MeshStandardMaterial({ color: pantsColor, roughness: 0.8 });
+    const hairMat = new THREE.MeshStandardMaterial({ color: hairColor, roughness: 0.9 });
     const eyeMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
 
     // Body (anchor point at bottom center of torso)
@@ -332,10 +358,24 @@ export class Game3D {
     headGroup.add(head);
     this.characterParts.headGroup = headGroup;
 
-    // Hair
-    const hairGeo = new THREE.BoxGeometry(1.1, 0.2, 1.1);
+    // Hair (Custom based on character)
+    let hairGeo;
+    if (charId === 'scientist') {
+      // Tall spiky hair
+      hairGeo = new THREE.ConeGeometry(0.8, 1.5, 5);
+      hairGeo.translate(0, 0.75, 0);
+    } else if (charId === 'brawn') {
+      // Short flat/spiky
+      hairGeo = new THREE.BoxGeometry(1.1, 0.4, 1.1);
+      hairGeo.translate(0, 0.2, 0);
+    } else {
+      // Scout (longer back)
+      hairGeo = new THREE.BoxGeometry(1.1, 0.3, 1.3);
+      hairGeo.translate(0, 0.15, -0.1);
+    }
+    
     const hair = new THREE.Mesh(hairGeo, hairMat);
-    hair.position.y = 0.5;
+    hair.position.y = 0.5; // Top of head
     headGroup.add(hair);
 
     // Eyes
