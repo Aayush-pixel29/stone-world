@@ -263,6 +263,16 @@ export const REACTIONS = [
     hint: 'The tree\'s blood grants immortality to the beast\'s skin.'
   },
   {
+    inputs: ['raw_meat', 'fire'],
+    process: 'heat',
+    output: 'cooked_meat',
+    outputQty: 1,
+    tier: 1,
+    description: 'A delicious, safe meal.',
+    science: 'Heat denatures proteins and kills pathogens via thermal breakdown.',
+    hint: 'The beast meets the flame.'
+  },
+  {
     inputs: ['clay', 'water'],
     process: 'mix',
     output: 'clay_slip',
@@ -617,5 +627,46 @@ export const REACTIONS = [
     description: 'The revival fluid.',
     science: 'In situ generation of nitric acid (from nitrate + sulfuric acid) mixed with ethanol creates a potent etchant.',
     hint: 'The biting spirit that awakens sleeping stone.'
+  },
+  // TIER 5 - Industrial Age
+  {
+    inputs: ['oil_shale', 'fire'],
+    process: 'heat',
+    output: 'oil',
+    outputQty: 1,
+    tier: 5,
+    description: 'You extracted crude oil.',
+    science: 'Destructive distillation of oil shale extracts kerogen, converting it to synthetic crude oil.',
+    hint: 'Squeeze the black blood from the rock with heat.'
+  },
+  {
+    inputs: ['oil', 'sulfuric_acid_weak'],
+    process: 'mix',
+    output: 'plastic',
+    outputQty: 1,
+    tier: 5,
+    description: 'You synthesized a durable polymer.',
+    science: 'Polymerization of hydrocarbons creates a strong, moldable synthetic material.',
+    hint: 'Mix the black gold with acid.'
+  },
+  {
+    inputs: ['steel', 'anvil'],
+    process: 'crush', 
+    output: 'gears',
+    outputQty: 2,
+    tier: 5,
+    description: 'Precisely machined steel gears.',
+    science: 'Mechanical advantage allows transmission of torque and speed.',
+    hint: 'Beat the hardest metal into teeth.'
+  },
+  {
+    inputs: ['iron', 'water'],
+    process: 'heat', 
+    output: 'steam_engine',
+    outputQty: 1,
+    tier: 5,
+    description: 'A functional steam engine!',
+    science: 'Expanding water vapor converts thermal energy into mechanical work.',
+    hint: 'Trap boiling water in a metal cage.'
   }
 ];

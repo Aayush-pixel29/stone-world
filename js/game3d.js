@@ -1,4 +1,10 @@
 import * as THREE from 'three';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { PhysicsEngine } from './physics.js';
+import { WorldGenerator } from './world_generator.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -22,6 +28,7 @@ export class Game3D {
       leaves: []
     };
     this.instancedMeshes = [];
+    this.entityMeshes = {}; // Map of entity id to Three.js Mesh
     
     // State
     this.clock = new THREE.Clock();
@@ -29,8 +36,11 @@ export class Game3D {
     this.cameraMode = 'follow'; // 'follow', 'orbit', 'top'
     this.onBiomeChange = null;
     
-    // Movement
+    // Logic
     this.isMoving = false;
+    this.physics = null;
+    this.worldGen = null;
+    this.characterBody = null;
     this.moveSpeed = 8;
     this.runSpeed = 16;
     this.keys = {
@@ -100,6 +110,12 @@ export class Game3D {
     // Fog for Atmosphere
     this.scene.fog = new THREE.FogExp2(0x87ceeb, 0.015);
 
+    // 2. Physics & World Generation
+    this.physics = new PhysicsEngine();
+    this.worldGen = new WorldGenerator(this.scene, this.physics);
+    this.worldGen.update(0, 0); // Generate initial chunks
+
+    // 3. Environment & Lighting
     // Bloom (torch + fireflies glow). Skipped on mobile — a bloom pass chains
     // several full-screen blur passes, which is a meaningful GPU cost on phone
     // hardware; not worth it against the mobile performance goals of this pass.
@@ -143,205 +159,19 @@ export class Game3D {
     this.scene.add(this.torchLight);
 
     // 5. Build World
-    this.createTerrain();
-    this.createWater();
-    this.createVegetation();
+    // this.createVegetation(); // Temp disable for testing procedural terrain
+
+    // 4. Character & Camera
     this.createCharacter();
     this.createParticles();
     this.createTorchGlow();
 
-    // 6. Setup Controls & Events
+    // 5. Setup Controls & Events
     this.setupControls();
     window.addEventListener('resize', this.resize.bind(this));
 
     // 7. Start Loop
     this.renderer.setAnimationLoop(() => this.update());
-  }
-
-  createTerrain() {
-    const geometry = new THREE.PlaneGeometry(this.worldSize, this.worldSize, 100, 100);
-    geometry.rotateX(-Math.PI / 2);
-
-    const positionAttribute = geometry.attributes.position;
-    const colors = [];
-    const color = new THREE.Color();
-
-    for (let i = 0; i < positionAttribute.count; i++) {
-      const x = positionAttribute.getX(i);
-      const z = positionAttribute.getZ(i);
-
-      // Height variation (simple noise approximation using sine waves)
-      const height = Math.sin(x * 0.05) * Math.cos(z * 0.05) * 2 + 
-                     Math.sin(x * 0.1 + z * 0.1) * 1;
-      positionAttribute.setY(i, height);
-
-      // Biome coloring
-      // NW: Forest (x < 0, z < 0)
-      // NE: River (x > 0, z < 0)
-      // SW: Cave (x < 0, z > 0)
-      // SE: Coast (x > 0, z > 0)
-      
-      let baseColor;
-      
-      // Calculate blend weights for soft transitions (width of 20 units)
-      const blendX = Math.max(0, Math.min(1, (x + 10) / 20)); // 0 = left, 1 = right
-      const blendZ = Math.max(0, Math.min(1, (z + 10) / 20)); // 0 = top, 1 = bottom
-      
-      const colorForest = new THREE.Color(0x2d7a3e);
-      const colorRiver = new THREE.Color(0x1a6b8a);
-      const colorCave = new THREE.Color(0x3a3a4a);
-      const colorCoast = new THREE.Color(0xd4b96a);
-      
-      const topColor = colorForest.clone().lerp(colorRiver, blendX);
-      const bottomColor = colorCave.clone().lerp(colorCoast, blendX);
-      color.copy(topColor).lerp(bottomColor, blendZ);
-      
-      // Add slight variation based on height
-      const hVariation = (height + 3) / 6; // 0 to 1
-      color.lerp(new THREE.Color(0xffffff), hVariation * 0.1);
-
-      colors.push(color.r, color.g, color.b);
-    }
-
-    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-    geometry.computeVertexNormals();
-
-    const material = new THREE.MeshStandardMaterial({
-      vertexColors: true,
-      roughness: 0.8,
-      metalness: 0.1
-    });
-
-    this.terrain = new THREE.Mesh(geometry, material);
-    this.terrain.receiveShadow = true;
-    this.scene.add(this.terrain);
-  }
-
-  createVegetation() {
-    const dummy = new THREE.Object3D();
-    
-    // --- JUNGLE TREES (Forest: x < 0, z < 0) ---
-    const treeCount = 200;
-    const trunkGeo = new THREE.CylinderGeometry(0.3, 0.4, 5, 8);
-    trunkGeo.translate(0, 2.5, 0);
-    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c4033 });
-    const trunks = new THREE.InstancedMesh(trunkGeo, trunkMat, treeCount);
-    trunks.castShadow = true;
-    trunks.receiveShadow = true;
-    
-    const leavesGeo = new THREE.IcosahedronGeometry(2.5, 1);
-    const leavesMat = new THREE.MeshStandardMaterial({ color: 0x22c55e });
-    const leaves = new THREE.InstancedMesh(leavesGeo, leavesMat, treeCount * 2);
-    leaves.castShadow = true;
-    
-    let leafIdx = 0;
-    for (let i = 0; i < treeCount; i++) {
-      const x = -10 - Math.random() * 480;
-      const z = -10 - Math.random() * 480;
-      const y = this.getTerrainHeight(x, z);
-      
-      const scale = 0.8 + Math.random() * 0.4;
-      dummy.position.set(x, y, z);
-      dummy.scale.set(scale, scale, scale);
-      dummy.updateMatrix();
-      trunks.setMatrixAt(i, dummy.matrix);
-      
-      // Canopy 1
-      dummy.position.set(x, y + 4 * scale, z);
-      dummy.scale.set(scale, scale * 0.8, scale);
-      dummy.updateMatrix();
-      leaves.setMatrixAt(leafIdx++, dummy.matrix);
-      
-      // Canopy 2
-      dummy.position.set(x, y + 5.5 * scale, z);
-      dummy.scale.set(scale * 0.8, scale * 0.6, scale * 0.8);
-      dummy.updateMatrix();
-      leaves.setMatrixAt(leafIdx++, dummy.matrix);
-    }
-    this.scene.add(trunks);
-    this.scene.add(leaves);
-    this.instancedMeshes.push(trunks, leaves);
-
-    // --- PALM TREES (Coast: x > 0, z > 0) ---
-    const palmCount = 80;
-    const palmTrunkGeo = new THREE.CylinderGeometry(0.2, 0.4, 6, 8);
-    palmTrunkGeo.translate(0, 3, 0);
-    const palmTrunks = new THREE.InstancedMesh(palmTrunkGeo, trunkMat, palmCount);
-    palmTrunks.castShadow = true;
-    
-    for (let i = 0; i < palmCount; i++) {
-      const x = 10 + Math.random() * 480;
-      const z = 10 + Math.random() * 480;
-      const y = this.getTerrainHeight(x, z);
-      
-      dummy.position.set(x, y, z);
-      dummy.rotation.set(
-        (Math.random() - 0.5) * 0.3,
-        Math.random() * Math.PI,
-        (Math.random() - 0.5) * 0.3
-      );
-      dummy.updateMatrix();
-      palmTrunks.setMatrixAt(i, dummy.matrix);
-    }
-    this.scene.add(palmTrunks);
-    
-    // --- FLOWERS ---
-    const flowerCount = 300;
-    const flowerGeo = new THREE.ConeGeometry(0.3, 0.5, 5);
-    flowerGeo.translate(0, 0.5, 0); // stem offset
-    const flowerColors = [0xef4444, 0xec4899, 0xeab308, 0x3b82f6, 0xf97316, 0xa855f7];
-    
-    const flowers = new THREE.InstancedMesh(flowerGeo, new THREE.MeshStandardMaterial(), flowerCount);
-    
-    const colorObj = new THREE.Color();
-    for (let i = 0; i < flowerCount; i++) {
-      // Place mostly in forest and coast
-      const isForest = Math.random() > 0.5;
-      const x = (isForest ? -1 : 1) * (10 + Math.random() * 480);
-      const z = (isForest ? -1 : 1) * (10 + Math.random() * 480);
-      const y = this.getTerrainHeight(x, z);
-      
-      dummy.position.set(x, y, z);
-      dummy.scale.setScalar(0.5 + Math.random() * 0.5);
-      dummy.updateMatrix();
-      flowers.setMatrixAt(i, dummy.matrix);
-      
-      colorObj.setHex(flowerColors[Math.floor(Math.random() * flowerColors.length)]);
-      flowers.setColorAt(i, colorObj);
-    }
-    this.scene.add(flowers);
-    // Add to animation array if we want swaying (would require custom shader or updating matrices in JS, 
-    // for now we'll skip JS updating 100 matrices per frame for simplicity)
-
-    // --- ROCKS ---
-    const rockCount = 200;
-    const rockGeo = new THREE.DodecahedronGeometry(1);
-    const rockMat = new THREE.MeshStandardMaterial({ color: 0x6b7280, roughness: 0.9 });
-    const rocks = new THREE.InstancedMesh(rockGeo, rockMat, rockCount);
-    rocks.castShadow = true;
-    rocks.receiveShadow = true;
-    
-    for (let i = 0; i < rockCount; i++) {
-      // Scatter everywhere, but bias towards cave (x < 0, z > 0)
-      let x, z;
-      if (Math.random() < 0.5) {
-        x = -Math.random() * 495;
-        z = Math.random() * 495;
-      } else {
-        x = (Math.random() - 0.5) * 990;
-        z = (Math.random() - 0.5) * 990;
-      }
-      
-      const y = this.getTerrainHeight(x, z);
-      const s = 0.5 + Math.random() * 1.5;
-      
-      dummy.position.set(x, y, z);
-      dummy.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
-      dummy.scale.set(s, s * 0.8, s);
-      dummy.updateMatrix();
-      rocks.setMatrixAt(i, dummy.matrix);
-    }
-    this.scene.add(rocks);
   }
 
   createCharacter() {
@@ -353,9 +183,15 @@ export class Game3D {
     // Initial position
     this.character.position.set(0, 0, 0);
     // Face forward
-    this.character.rotation.y = Math.PI;
+    this.character.add(this.body);
 
     this.scene.add(this.character);
+    
+    // Add Physics Body
+    if (this.physics) {
+      this.characterBody = this.physics.addPlayer(0.5, 1.5, 50);
+      this.characterBody.position.set(0, 10, 0); // Drop from sky
+    }
   }
 
   // Builds a character rig for the given preset without touching this.character —
@@ -613,6 +449,7 @@ export class Game3D {
         case 'KeyD': case 'ArrowRight': this.keys.right = true; break;
         case 'KeyC': this.cycleCameraMode(); break;
         case 'ShiftLeft': case 'ShiftRight': this.keys.run = true; break;
+        case 'Space': case 'KeyF': this.handleAttack(); break;
       }
     });
 
@@ -626,6 +463,9 @@ export class Game3D {
         case 'ShiftLeft': case 'ShiftRight': this.keys.run = false; break;
       }
     });
+
+    // Mobile attack button logic (we will hook it up in UI or handle here)
+    // Actually, UI handles mobile buttons, so we just expose handleAttack()
 
     // Mouse for Orbit
     this.container.addEventListener('mousedown', (e) => {
@@ -654,6 +494,45 @@ export class Game3D {
 
     // Prevent context menu on right click
     this.container.addEventListener('contextmenu', e => e.preventDefault());
+  }
+
+  handleAttack() {
+    if (!this.engine || !this.engine.entityManager) return;
+    
+    // Find closest entity within range (5 units)
+    let closestId = null;
+    let minDist = 5;
+    
+    const charPos = this.character.position;
+    this.engine.entityManager.entities.forEach(ent => {
+      const dx = ent.x - charPos.x;
+      const dz = ent.z - charPos.z;
+      const dist = Math.sqrt(dx*dx + dz*dz);
+      if (dist < minDist) {
+        minDist = dist;
+        closestId = ent.id;
+      }
+    });
+
+    if (closestId !== null) {
+      // Base damage 10, boosted by equipped weapons later
+      let damage = 15;
+      if (this.engine.hasItem('bronze_sword')) damage = 50;
+      else if (this.engine.hasItem('spear')) damage = 35;
+      else if (this.engine.hasItem('sharp_stone')) damage = 20;
+
+      this.engine.attack(closestId, damage);
+      
+      // Visual feedback: simple scale punch
+      const mesh = this.entityMeshes[closestId];
+      if (mesh) {
+        mesh.scale.set(1.2, 0.8, 1.2);
+        setTimeout(() => mesh.scale.set(1, 1, 1), 150);
+      }
+    } else {
+      // Swish air
+      // this.engine.emit('log', { type: 'system', text: 'You swing at the air.' });
+    }
   }
 
   setupJoystick() {
@@ -701,6 +580,18 @@ export class Game3D {
   }
 
   getTerrainHeight(x, z) {
+    if (this.worldGen) {
+      // Replicate the fBm logic from world_generator for entities and camera
+      let y = 0;
+      let amplitude = 10;
+      let frequency = 0.01;
+      for (let o = 0; o < 3; o++) {
+        y += this.worldGen.noise2D(x * frequency, z * frequency) * amplitude;
+        amplitude *= 0.5;
+        frequency *= 2;
+      }
+      return y;
+    }
     return Math.sin(x * 0.05) * Math.cos(z * 0.05) * 2 + Math.sin(x * 0.1 + z * 0.1) * 1;
   }
 
@@ -712,48 +603,64 @@ export class Game3D {
   }
 
   update() {
-    const dt = this.clock.getDelta();
+    let dt = this.clock.getDelta();
+    if (dt > 0.1) dt = 0.1; // clamp delta
     this.time += dt;
 
-    if (!this.character) return;
-
-    // --- CHARACTER MOVEMENT ---
-    let moveIntent = false;
-    let moveDir = new THREE.Vector3();
-    const speed = this.keys.run ? this.runSpeed : this.moveSpeed;
-    const rotationSpeed = 3.0;
-
-    if (this.keys.forward) { moveDir.z = -1; moveIntent = true; }
-    if (this.keys.backward) { moveDir.z = 1; moveIntent = true; }
-    
-    // Rotation
-    if (this.keys.left) { 
-      this.character.rotation.y += rotationSpeed * dt; 
-      moveDir.x = -1; moveIntent = true;
-    }
-    if (this.keys.right) { 
-      this.character.rotation.y -= rotationSpeed * dt; 
-      moveDir.x = 1; moveIntent = true;
+    if (this.physics) {
+      this.physics.update(dt);
     }
 
-    this.isMoving = moveIntent;
+    if (this.worldGen && this.character) {
+      this.worldGen.update(this.character.position.x, this.character.position.z);
+    }
 
-    if (moveIntent) {
-      // Apply movement relative to character rotation
-      moveDir.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.character.rotation.y);
-      moveDir.normalize();
+    // --- PLAYER MOVEMENT (Physics) ---
+    this.isMoving = false;
+    let running = this.keys.run;
+
+    if (this.characterBody) {
+      const speed = running ? 15 : 8;
       
-      this.character.position.addScaledVector(moveDir, speed * dt);
+      // Calculate input direction
+      const inputDir = new THREE.Vector3(0, 0, 0);
+      if (this.keys.forward) inputDir.z -= 1;
+      if (this.keys.backward) inputDir.z += 1;
+      if (this.keys.left) inputDir.x -= 1;
+      if (this.keys.right) inputDir.x += 1;
       
-      // Bounds check
-      const bound = this.worldSize / 2 - 5;
-      this.character.position.x = Math.max(-bound, Math.min(bound, this.character.position.x));
-      this.character.position.z = Math.max(-bound, Math.min(bound, this.character.position.z));
-    }
+      if (inputDir.lengthSq() > 0) {
+        inputDir.normalize();
+        this.isMoving = true;
+        
+        // Face movement direction
+        const targetRot = Math.atan2(inputDir.x, inputDir.z);
+        
+        // Smooth rotation
+        let deltaRot = targetRot - this.character.rotation.y;
+        deltaRot = ((deltaRot + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
+        this.character.rotation.y += deltaRot * Math.min(1, dt * 10);
+        
+        // Apply velocity (preserve Y velocity for gravity)
+        this.characterBody.velocity.x = inputDir.x * speed;
+        this.characterBody.velocity.z = inputDir.z * speed;
+      } else {
+        // Stop X/Z movement
+        this.characterBody.velocity.x = 0;
+        this.characterBody.velocity.z = 0;
+      }
 
-    // Snap to terrain height
-    const terrainY = this.getTerrainHeight(this.character.position.x, this.character.position.z);
-    this.character.position.y = terrainY;
+      // Sync visual mesh to physics body
+      this.character.position.copy(this.characterBody.position);
+      // character origin is center, visual might need offset
+      this.character.position.y -= 0.75; 
+      
+      // Prevent falling out of world
+      if (this.characterBody.position.y < -50) {
+        this.characterBody.position.set(0, 10, 0);
+        this.characterBody.velocity.set(0, 0, 0);
+      }
+    }
 
     // Biome check
     const newBiome = this.detectBiome(this.character.position.x, this.character.position.z);
@@ -900,14 +807,67 @@ export class Game3D {
       }
     });
 
+    // --- ENTITIES ---
+    if (this.engine) {
+      // Logic update
+      this.engine.update(dt, this.character.position.x, this.character.position.z);
+      
+      // Rendering update
+      const activeEntities = this.engine.entityManager.entities;
+      const activeIds = new Set(activeEntities.map(e => e.id));
+      
+      // Remove dead/despawned entities
+      for (const id in this.entityMeshes) {
+        if (!activeIds.has(Number(id))) {
+          this.scene.remove(this.entityMeshes[id]);
+          delete this.entityMeshes[id];
+        }
+      }
+
+      // Update / Create
+      activeEntities.forEach(ent => {
+        let mesh = this.entityMeshes[ent.id];
+        if (!mesh) {
+          // Create simple box for animal
+          const geo = new THREE.BoxGeometry(0.8, 0.8, 1.2);
+          let color = 0x8b4513; // brown for deer/boar
+          if (ent.type === 'bear') color = 0x3d1c00;
+          if (ent.type === 'duck') color = 0x008000;
+          
+          const mat = new THREE.MeshStandardMaterial({ color });
+          mesh = new THREE.Mesh(geo, mat);
+          mesh.castShadow = true;
+          mesh.receiveShadow = true;
+          this.scene.add(mesh);
+          this.entityMeshes[ent.id] = mesh;
+          
+          // Add emoji label (optional, could just rely on shape)
+        }
+        
+        // Lerp position for smoothness (or just set directly since AI runs locally)
+        mesh.position.x = ent.x;
+        mesh.position.z = ent.z;
+        mesh.position.y = this.getTerrainHeight(ent.x, ent.z) + 0.4; // half height
+        
+        // Smooth rotation
+        let deltaRot = ent.rotY - mesh.rotation.y;
+        deltaRot = ((deltaRot + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
+        mesh.rotation.y += deltaRot * Math.min(1, dt * 5);
+        
+        // Walk bobbing
+        if (ent.state !== 'idle') {
+          mesh.position.y += Math.abs(Math.sin(this.time * (ent.state === 'flee' ? 15 : 8))) * 0.2;
+        }
+      });
+    }
+
     // --- DAY / NIGHT CYCLE ---
     if (this.engine) {
       const timeOfDay = this.engine.state.timeOfDay || 0; // 0 to 1
       const isNight = timeOfDay > 0.7 || timeOfDay < 0.3;
       
-      // Calculate sun position based on timeOfDay (0 = noon, 0.5 = midnight)
-      // Actually in engine.js: timeOfDay goes 0 to 1 over 10 minutes. 0 = sunrise, 0.25 = noon, 0.5 = sunset, 0.75 = midnight.
-      const sunAngle = (timeOfDay * Math.PI * 2) - Math.PI/2;
+      // Calculate sun position based on timeOfDay (0.0 = dawn, 0.25 = noon, 0.5 = dusk, 0.75 = midnight)
+      const sunAngle = timeOfDay * Math.PI * 2;
       
       const sunHeight = Math.sin(sunAngle);
       const sunIntensity = Math.max(0, sunHeight * 1.5);

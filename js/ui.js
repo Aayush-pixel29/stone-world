@@ -692,8 +692,20 @@ export class UIManager {
   }
 
   updateTimeVisuals(data) {
-    // In 3D mode, time visuals can be passed to game3d to change lighting.
-    // For now, we'll let game3d be daytime always, or implement later.
+    const timeIcon = document.getElementById('time-icon');
+    const timeText = document.getElementById('time-text');
+    if (!timeIcon || !timeText) return;
+
+    timeIcon.textContent = data.isNight ? '🌙' : '☀️';
+
+    // Calculate time (Dawn = 0.0 = 06:00)
+    let totalHours = (data.timeOfDay * 24) + 6;
+    if (totalHours >= 24) totalHours -= 24;
+    
+    const hours = Math.floor(totalHours);
+    const minutes = Math.floor((totalHours - hours) * 60);
+    
+    timeText.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
   }
 
   // ─── Discovery Modal ──────────────────────────────────────────────

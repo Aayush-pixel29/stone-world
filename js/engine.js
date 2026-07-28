@@ -7,7 +7,8 @@
  */
 
 import { REACTIONS, PROCESSES } from './reactions.js';
-import { BIOMES, ITEMS } from './world.js';
+import { BIOMES, ITEMS, ANIMALS } from './world.js';
+import { EntityManager } from './entities.js';
 
 // ─── Constants ───────────────────────────────────────────────────────
 const EXPLORE_COOLDOWN = 3000; // ms between explorations
@@ -34,6 +35,7 @@ function createDefaultState() {
     selectedProcess: 'mix',
     myCharacter: 'scientist',
     partnerCharacter: null,
+    isNight: false,
   };
 }
 
@@ -46,6 +48,8 @@ export class GameEngine {
     this.dayTimer = null;
     this.playerName = 'You';
     this.partnerName = 'Partner';
+    
+    this.entityManager = new EntityManager(this);
   }
 
   // ─── Event System ──────────────────────────────────────────────────
@@ -116,14 +120,19 @@ export class GameEngine {
     }, narration.length * 800);
 
     this.startDayCycle();
+    this.entityManager.init();
     this.autoSave();
   }
 
   startDayCycle() {
     if (this.dayTimer) clearInterval(this.dayTimer);
-    const tickInterval = DAY_LENGTH / 100;
+    const tickInterval = DAY_LENGTH / 1000; // Update more frequently (1000 ticks per day)
+    
+    // timeOfDay: 0.0 (Dawn) -> 0.25 (Noon) -> 0.5 (Dusk) -> 0.75 (Midnight) -> 1.0 (Dawn)
     this.dayTimer = setInterval(() => {
-      this.state.timeOfDay += 0.01;
+      const oldTime = this.state.timeOfDay;
+      this.state.timeOfDay += 0.001;
+      
       if (this.state.timeOfDay >= 1.0) {
         this.state.timeOfDay = 0;
         this.state.dayCount++;
@@ -133,10 +142,22 @@ export class GameEngine {
         });
         this.autoSave();
       }
+
+      // Check transitions
+      const isNight = this.state.timeOfDay > 0.5 && this.state.timeOfDay < 1.0;
+      
+      if (!this.state.isNight && isNight) {
+        this.state.isNight = true;
+        this.emit('dusk', { day: this.state.dayCount });
+      } else if (this.state.isNight && !isNight) {
+        this.state.isNight = false;
+        this.emit('dawn', { day: this.state.dayCount });
+      }
+
       this.emit('timeChange', {
         timeOfDay: this.state.timeOfDay,
         dayCount: this.state.dayCount,
-        isNight: this.state.timeOfDay > 0.35 && this.state.timeOfDay < 0.85,
+        isNight: this.state.isNight,
       });
     }, tickInterval);
   }
@@ -433,6 +454,32 @@ export class GameEngine {
     this.emit('stateChange', this.state);
     this.autoSave();
     return { success: true, found };
+  }
+
+  // ─── Combat & Hunting ──────────────────────────────────────────────
+  attack(entityId, weaponDamage = 10) {
+    const result = this.entityManager.damageEntity(entityId, weaponDamage);
+    if (!result) return false;
+
+    if (result.died) {
+      this.emit('log', {
+        type: 'discovery',
+        text: `⚔️ You hunted a ${result.name}! Drops: ${result.drops.map(d => `${d.qty}x ${ITEMS[d.id].name}`).join(', ')}`
+      });
+      // Sound effect could be triggered here
+      this.emit('huntSuccess', result);
+      this.autoSave();
+    } else {
+      this.emit('log', {
+        type: 'system',
+        text: `⚔️ You attacked! The creature flees.`
+      });
+    }
+    return true;
+  }
+
+  update(dt, playerX, playerZ) {
+    this.entityManager.update(dt, playerX, playerZ);
   }
 
   // ─── Journal ───────────────────────────────────────────────────────

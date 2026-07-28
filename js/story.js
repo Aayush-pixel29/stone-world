@@ -31,6 +31,18 @@ export const STORY_EVENTS = [
     ]
   },
   {
+    id: 'first_hunt',
+    trigger: { type: 'hunt' },
+    objective: 'The Apex Predator',
+    subGoal: 'Cook your meat to avoid parasites.',
+    dialogue: [
+      "You took down a beast! That's 10 billion percent impressive.",
+      "Raw meat is full of parasites. We aren't scavengers, we are scientists.",
+      "Apply thermal energy. Use your fire to denature the proteins and make it safe.",
+      "Welcome to the top of the food chain."
+    ]
+  },
+  {
     id: 'kiln_crafted',
     trigger: { type: 'craft', item: 'kiln' },
     objective: 'The Bronze Age',
@@ -104,6 +116,31 @@ export const STORY_EVENTS = [
       "Combine distilled alcohol, nitric acid, and our chemical mastery. We need Nital.",
       "It's time to wake everyone up."
     ]
+  },
+  {
+    id: 'nital_crafted',
+    trigger: { type: 'craft', item: 'nital' },
+    objective: 'The Industrial Revolution',
+    subGoal: 'Synthesize Plastic and a Steam Engine.',
+    dialogue: [
+      "We have the revival fluid! Humanity will return.",
+      "But a revived humanity needs infrastructure. They need the Industrial Revolution.",
+      "We must extract the black blood of the earth: Oil. From it, we will forge a synthetic miracle: Plastic.",
+      "And we need a beating mechanical heart. Forge iron into a Steam Engine.",
+      "Let's conquer the planet!"
+    ]
+  },
+  {
+    id: 'engine_crafted',
+    trigger: { type: 'craft', item: 'steam_engine' },
+    objective: 'Masters of the Earth',
+    subGoal: 'Survive, expand, and revive the world.',
+    dialogue: [
+      "A steam engine... The symbol of mankind's mastery over thermodynamics.",
+      "You've done it. From a stone axe to an industrial powerhouse.",
+      "The wilderness is ours. The biomes are mapped. The beasts are conquered.",
+      "Now, we build a kingdom of science. This is our Stone World!"
+    ]
   }
 ];
 
@@ -121,6 +158,11 @@ export class StoryEngine {
     // Listen for crafts to trigger story
     this.engine.on('craftSuccess', (data) => {
       this.checkEvent('craft', data.reaction.output);
+    });
+
+    // Listen for hunts
+    this.engine.on('huntSuccess', (data) => {
+      this.checkEvent('hunt', null);
     });
 
     // Start intro if it's a new game (or just started)

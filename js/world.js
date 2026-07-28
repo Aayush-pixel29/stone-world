@@ -11,7 +11,8 @@ export const BIOMES = {
       { id: 'reeds', chance: 0.6, qty: [1, 3] },
       { id: 'river_stone', chance: 0.5, qty: [1, 2] },
       { id: 'fish', chance: 0.4, qty: [1, 2] }
-    ]
+    ],
+    animals: ['duck']
   },
   forest: {
     name: 'Forest',
@@ -27,7 +28,8 @@ export const BIOMES = {
       { id: 'mushroom', chance: 0.4, qty: [1, 2] },
       { id: 'animal_fat', chance: 0.3, qty: [1, 2] },
       { id: 'hide', chance: 0.3, qty: [1, 1] }
-    ]
+    ],
+    animals: ['deer', 'boar']
   },
   cave: {
     name: 'Cave',
@@ -43,7 +45,8 @@ export const BIOMES = {
       { id: 'tin_ore', chance: 0.4, qty: [1, 2] },
       { id: 'stone', chance: 1.0, qty: [2, 4] },
       { id: 'coal', chance: 0.5, qty: [1, 3] }
-    ]
+    ],
+    animals: ['bat', 'bear']
   },
   coast: {
     name: 'Coast',
@@ -57,8 +60,45 @@ export const BIOMES = {
       { id: 'sand', chance: 0.9, qty: [2, 5] },
       { id: 'driftwood', chance: 0.4, qty: [1, 2] },
       { id: 'zinc_ore', chance: 0.3, qty: [1, 1] }
-    ]
+    ],
+    animals: ['crab', 'seagull']
+  },
+  desert: {
+    name: 'Desert',
+    emoji: '🏜️',
+    description: 'A scorching wasteland of sand and heat.',
+    color: '#eab676',
+    resources: [
+      { id: 'sand', chance: 1.0, qty: [3, 8] },
+      { id: 'cactus', chance: 0.6, qty: [1, 2] },
+      { id: 'oil_shale', chance: 0.4, qty: [1, 3] },
+      { id: 'saltpeter', chance: 0.5, qty: [1, 2] }
+    ],
+    animals: ['boar'] // Maybe add snakes later
+  },
+  mountain: {
+    name: 'Mountain',
+    emoji: '🏔️',
+    description: 'Freezing, jagged peaks touching the sky.',
+    color: '#e2e8f0',
+    resources: [
+      { id: 'stone', chance: 1.0, qty: [3, 6] },
+      { id: 'iron_ore', chance: 0.6, qty: [1, 3] },
+      { id: 'sulfur', chance: 0.5, qty: [1, 2] },
+      { id: 'obsidian', chance: 0.3, qty: [1, 1] }
+    ],
+    animals: ['bear', 'deer']
   }
+};
+
+export const ANIMALS = {
+  deer: { name: 'Deer', emoji: '🦌', hp: 30, speed: 6, drops: [{id:'raw_meat', qty:[1,2]}, {id:'hide', qty:[1,1]}, {id:'bone', qty:[1,2]}] },
+  boar: { name: 'Boar', emoji: '🐗', hp: 50, speed: 4, drops: [{id:'raw_meat', qty:[2,3]}, {id:'hide', qty:[1,2]}, {id:'animal_fat', qty:[1,2]}] },
+  bear: { name: 'Cave Bear', emoji: '🐻', hp: 100, speed: 7, drops: [{id:'raw_meat', qty:[3,5]}, {id:'hide', qty:[2,3]}, {id:'bone', qty:[2,4]}] },
+  duck: { name: 'Duck', emoji: '🦆', hp: 10, speed: 2, drops: [{id:'raw_meat', qty:[1,1]}] },
+  bat: { name: 'Bat', emoji: '🦇', hp: 5, speed: 8, drops: [] },
+  crab: { name: 'Crab', emoji: '🦀', hp: 15, speed: 1, drops: [{id:'raw_meat', qty:[1,1]}] },
+  seagull: { name: 'Seagull', emoji: '🕊️', hp: 10, speed: 5, drops: [] }
 };
 
 export const ITEMS = {
@@ -80,6 +120,8 @@ export const ITEMS = {
   seashells: { name: 'Seashells', emoji: '🐚', description: 'Hard exoskeletons from the sea.', tier: 1, type: 'raw' },
   sand: { name: 'Sand', emoji: '⏳', description: 'Fine grains of silica.', tier: 1, type: 'raw' },
   ash: { name: 'Ash', emoji: '🌪️', description: 'Powdery remains of a fire.', tier: 1, type: 'raw' },
+  raw_meat: { name: 'Raw Meat', emoji: '🥩', description: 'Uncooked animal flesh.', tier: 1, type: 'raw' },
+  bone: { name: 'Bone', emoji: '🦴', description: 'A sturdy skeletal remain.', tier: 1, type: 'raw' },
   malachite: { name: 'Malachite', emoji: '🟩', description: 'A green copper carbonate mineral.', tier: 2, type: 'raw' },
   tin_ore: { name: 'Tin Ore', emoji: '🪨', description: 'Cassiterite, a heavy, dark stone.', tier: 2, type: 'raw' },
   iron_ore: { name: 'Iron Ore', emoji: '🩸', description: 'Reddish hematite rock.', tier: 3, type: 'raw' },
@@ -91,6 +133,9 @@ export const ITEMS = {
   seaweed: { name: 'Seaweed', emoji: '🥬', description: 'Salty marine plants.', tier: 1, type: 'raw' },
   driftwood: { name: 'Driftwood', emoji: '🪵', description: 'Sun-bleached wood washed ashore.', tier: 1, type: 'raw' },
   zinc_ore: { name: 'Zinc Ore', emoji: '🪨', description: 'Sphalerite rock.', tier: 3, type: 'raw' },
+  cactus: { name: 'Cactus', emoji: '🌵', description: 'A spiky desert plant full of water.', tier: 1, type: 'raw' },
+  oil_shale: { name: 'Oil Shale', emoji: '🪨', description: 'Rock containing kerogen.', tier: 4, type: 'raw' },
+  obsidian: { name: 'Obsidian', emoji: '🪨', description: 'Sharp volcanic glass.', tier: 2, type: 'raw' },
 
   // Crafted Items
   fire: { name: 'Fire', emoji: '🔥', description: 'The first gift of civilization.', tier: 0, type: 'crafted' },
@@ -104,6 +149,7 @@ export const ITEMS = {
   basket: { name: 'Basket', emoji: '🧺', description: 'A woven container for carrying goods.', tier: 0, type: 'crafted' },
   tannin: { name: 'Tannin', emoji: '🟤', description: 'Bitter plant extract used for tanning.', tier: 0, type: 'crafted' },
   cooked_fish: { name: 'Cooked Fish', emoji: '🍳', description: 'A hot, nourishing meal.', tier: 0, type: 'crafted' },
+  cooked_meat: { name: 'Cooked Meat', emoji: '🍖', description: 'Roasted and delicious.', tier: 1, type: 'crafted' },
   berry_juice: { name: 'Berry Juice', emoji: '🧃', description: 'Sweet and hydrating liquid.', tier: 0, type: 'crafted' },
 
   kiln: { name: 'Kiln', emoji: '🏺', description: 'An oven capable of extreme heat.', tier: 1, type: 'crafted' },
@@ -153,5 +199,13 @@ export const ITEMS = {
   ferric_chloride: { name: 'Ferric Chloride', emoji: '🧪', description: 'An etchant and coagulant.', tier: 4, type: 'crafted' },
   calcium_carbide: { name: 'Calcium Carbide', emoji: '🪨', description: 'A dark, rocky chemical.', tier: 4, type: 'crafted' },
   acetylene_gas: { name: 'Acetylene Gas', emoji: '💨', description: 'A highly flammable gas.', tier: 4, type: 'crafted' },
-  nital: { name: 'Nital', emoji: '🧪', description: 'The revival fluid.', tier: 4, type: 'crafted' }
+  nital: { name: 'Nital', emoji: '🧪', description: 'The revival fluid.', tier: 4, type: 'crafted' },
+  
+  // TIER 5 - Industrial
+  oil: { name: 'Oil', emoji: '🛢️', description: 'Black gold. Hydrocarbon fluid.', tier: 5, type: 'crafted' },
+  plastic: { name: 'Plastic', emoji: '🧴', description: 'Molded polymer.', tier: 5, type: 'crafted' },
+  gears: { name: 'Gears', emoji: '⚙️', description: 'Interlocking mechanical parts.', tier: 5, type: 'crafted' },
+  steam_engine: { name: 'Steam Engine', emoji: '🚂', description: 'A machine powered by steam.', tier: 5, type: 'crafted' },
+  gasoline: { name: 'Gasoline', emoji: '⛽', description: 'Highly refined fuel.', tier: 5, type: 'crafted' },
+  dynamite: { name: 'Dynamite', emoji: '🧨', description: 'A controlled explosion.', tier: 5, type: 'crafted' }
 };

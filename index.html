@@ -21,7 +21,9 @@
   {
     "imports": {
       "three": "https://unpkg.com/three@0.164.1/build/three.module.js",
-      "three/addons/": "https://unpkg.com/three@0.164.1/examples/jsm/"
+      "three/addons/": "https://unpkg.com/three@0.164.1/examples/jsm/",
+      "cannon-es": "https://unpkg.com/cannon-es@0.20.0/dist/cannon-es.js",
+      "simplex-noise": "https://unpkg.com/simplex-noise@4.0.1/dist/esm/simplex-noise.js"
     }
   }
   </script>
@@ -101,6 +103,8 @@
       <span class="hud-title">STONE WORLD</span>
       <span class="hud-divider">|</span>
       <span class="hud-stat">Day <span id="day-counter">1</span></span>
+      <span class="hud-divider">|</span>
+      <span class="hud-stat"><span id="time-icon">☀️</span> <span id="time-text">06:00</span></span>
     </div>
     <div class="hud-center">
       <div class="biome-indicator" id="biome-indicator">
